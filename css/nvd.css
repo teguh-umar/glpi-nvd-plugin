@@ -1,0 +1,112 @@
+.vuln-table {
+    margin-left: auto;
+    margin-right: auto;
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.vuln-table td, th {
+    padding: 8px;
+    word-wrap: break-word;
+}
+
+.centered {
+    text-align: center;
+}
+
+.justified {
+    text-align: justify;
+}
+
+.vuln-table tr:nth-child(even) {
+    background-color: #dddddd;
+}
+
+.nvd_cpe_div {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 5px;
+}
+
+.nvd_cpe_collumn {
+    display: flex;
+    flex-basis: 100%;
+    justify-content: center;
+    margin: 5px;
+}
+
+.nvd_cpe_stack_collumn {
+    display: block;
+    flex-basis: 100%;
+    justify-content: center;
+    margin: 5px;
+}
+
+.vertical_ruler {
+    border-left: 0.05em solid rgba(128, 128, 128, 0.333);
+    height: auto;
+}
+
+.horizontal_ruler {
+    border-top: 0.05em solid rgba(128, 128, 128, 0.333);
+    width: auto;
+    margin: 10px;
+}
+
+.nvd_cpe_row {
+    float: left;
+    height: auto;
+    display: table;
+    margin-right: 5px;
+    text-align: center;
+}
+
+.nvd_cpe_stack_row {
+    display: flex;
+    float: none;
+    height: auto;
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.nvd_cpe_row div {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.button {
+    margin-top: 10px;
+}
+
+.nvd_cpe_title {
+    font-size: 1.3vw;
+}
+
+.nvd_cpe_subtitle {
+    font-size: 1.0vw;
+}
+
+.nvd_cpe_name {
+    font-size: 1vw;
+}
+
+.nvd_cpe_dropdown {
+    width: 15vw;
+}
+
+.nvd_cpe_wide_dropdown {
+    width: 19vw;
+}
+
+.nvd_cpe_textinput {
+    width: 15vw;
+}
+
+.nvd_cpe_wide_textinput {
+    width: 17vw;
+}

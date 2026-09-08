@@ -268,7 +268,10 @@ class PluginNvdUpdatevuln extends CommonGLPI {
                 $descriptions = [];
         
                 foreach($record['descriptions'] as $description) {
-                    $descriptions[$description['lang']] = str_replace("'", "\'", $description['value']);
+                    // Store the raw value: GLPI 11's query builder ($DB->insert) handles
+                    // quoting, and GLPI 11 escapes on output. Pre-escaping here would
+                    // persist literal backslashes in the description text.
+                    $descriptions[$description['lang']] = $description['value'];
                 }
 
                 // Configuration(s)

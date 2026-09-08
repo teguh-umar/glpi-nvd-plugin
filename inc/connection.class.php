@@ -99,28 +99,40 @@ class PluginNvdConnection {
 
     /**
      * Launch request to url with parameters and headers
-     * 
+     *
+     * Uses GLPI's Toolbox::callCurl() so the call honours the instance's
+     * outbound proxy configuration (Setup > General > System) and GLPI's
+     * curl error handling, instead of a bare curl_exec().
+     *
      * @since 1.0.0
-     * 
-     * @return string   request output
+     *
+     * @return array|null   decoded JSON response, or null on failure / invalid JSON
      */
     public function launchRequest() {
 
         $fullUrl    = $this->getCompleteUrl();
         $headers    = $this->getRequestHeaders();
 
-        $ch = curl_init();
-
-        curl_setopt($ch, CURLOPT_URL, $fullUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $eopts = [
+            CURLOPT_TIMEOUT        => 60,
+            CURLOPT_CONNECTTIMEOUT => 15,
+        ];
 
         if (count($headers) != 0) {
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            $eopts[CURLOPT_HTTPHEADER] = $headers;
         }
 
-        $output = curl_exec($ch);
+        $errmsg    = null;
+        $curlerr   = null;
+        $output    = Toolbox::callCurl($fullUrl, $eopts, $errmsg, $curlerr);
 
-        curl_close($ch);
+        if ($output === '' || $output === null) {
+            Toolbox::logInFile(
+                'nvd',
+                sprintf("NVD plugin: request to %s failed (%s)\n", $fullUrl, $errmsg ?: $curlerr ?: 'no content')
+            );
+            return null;
+        }
 
         return json_decode($output, true);
     }

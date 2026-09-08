@@ -46,7 +46,8 @@ function addEventListeners() {
             }
         }
 
-        script_url = window.location.origin + "/glpi/plugins/nvd/front/softwarecpe.form.php?vendor=" + vendor;
+        var root_doc = (typeof CFG_GLPI !== "undefined" && CFG_GLPI["root_doc"]) ? CFG_GLPI["root_doc"] : "";
+        script_url = root_doc + "/plugins/nvd/front/softwarecpe.form.php?vendor=" + encodeURIComponent(vendor);
         http.open('GET', script_url);
         http.send();
     });

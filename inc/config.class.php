@@ -60,7 +60,7 @@ class PluginNvdConfig extends CommonGLPI {
 
         $currentApiKey = PluginNvdDatabaseutils::getNvdApiKey();
 
-        $out  = '<form action="../plugins/nvd/front/config.form.php" method="POST">';
+        $out  = '<form action="' . Html::getPrefixedUrl('/plugins/nvd/front/config.form.php') . '" method="POST">';
         $out .= Html::hidden('_glpi_csrf_token', array('value' => Session::getNewCSRFToken()));
 
         if ($currentApiKey != NULL) {
@@ -73,7 +73,7 @@ class PluginNvdConfig extends CommonGLPI {
         $out .= '<div class="nvd_cpe_row">';
         $out .= '<b class="nvd_cpe_title">' . __('NVD API key') . ':</b></div>';
         $out .= '<div class="nvd_cpe_row">';
-        $out .= '<input required class="nvd_cpe_wide_textinput" type="text" id="nvd_api_key" name="newApiKey" value="' . $currentApiKey . '"></div></div>';
+        $out .= '<input required class="nvd_cpe_wide_textinput" type="text" id="nvd_api_key" name="newApiKey" value="' . htmlescape($currentApiKey) . '"></div></div>';
 
         $out .= '<div class="nvd_cpe_stack_row">';
         $out .= '<input type="submit" class="btn btn-primary" value="' . __('Save NVD plugin configuration') . '"></div></div></div>';

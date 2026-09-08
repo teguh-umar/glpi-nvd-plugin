@@ -8,7 +8,10 @@ if (!$plugin->isInstalled('nvd') || !$plugin->isActivated('nvd')) {
    Html::displayNotFoundError();
 }
 
-// Check if request is loocking for vendor products or wanting to set/update software vendor and product cpe names 
+// Managing CPE associations for a software requires the right to update software
+Session::checkRight('software', UPDATE);
+
+// Check if request is loocking for vendor products or wanting to set/update software vendor and product cpe names
 if (isset($_GET['vendor'])) {
 
     $vendor = $_GET['vendor'];

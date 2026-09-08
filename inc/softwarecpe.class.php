@@ -243,6 +243,7 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
         $out .= '<option disabled selected value="-DEFAULT-">-- ' . __('SELECT TERM TO FILTER VENDORS BY') . ' --</option>';
         foreach ($sugested_vendor_terms as $term) {
 
+            $term = htmlescape($term);
             $out .= '<option ' . "value=\"$term\">$term</option>";
         }
         $out .= '</select></div></div></div>';
@@ -268,6 +269,7 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
         $out .= '<option disabled selected value="-DEFAULT-">-- ' . __('SELECT TERM TO FILTER PRODUCTS BY') . ' --</option>';
         foreach ($sugested_product_terms as $term) {
 
+            $term = htmlescape($term);
             $out .= '<option ' . "value=\"$term\">$term</option>";
         }
         $out .= '</select></div></div></div>';
@@ -295,7 +297,7 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
     private static function printFormHeader($action, $ItemID) {
 
         // Hidden form fields: _glpi_csrf_token | action (insert or update) | softwares_id
-        $out =  '<form action="../plugins/nvd/front/softwarecpe.form.php" method="POST">';
+        $out =  '<form action="' . Html::getPrefixedUrl('/plugins/nvd/front/softwarecpe.form.php') . '" method="POST">';
         $out .= Html::hidden('_glpi_csrf_token', array('value' => Session::getNewCSRFToken()));
         $out .= Html::hidden('action', array('value' => $action));
         $out .= Html::hidden('softwares_id', array('value' => $ItemID));
@@ -320,7 +322,7 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
         $out =  '<div class="nvd_cpe_div">';
 
         // Hidden vendor and product lists
-        $out .= '<p id="nvd_cpe_vendor_hidden_list" hidden>' . implode(' ', $vendors) . '</p>';
+        $out .= '<p id="nvd_cpe_vendor_hidden_list" hidden>' . htmlescape(implode(' ', $vendors)) . '</p>';
         $out .= '<p id="nvd_cpe_product_hidden_list" hidden></p>';
 
         // Vendor dropdown
@@ -332,7 +334,9 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
         $out .= '<option disabled ' . (($selected_vendor==NULL) ? 'selected ' : '') . ' value="-DEFAULT-">-- ' . __('SELECT A VENDOR') . ' --</option>';
         foreach ($vendors as $vendor) {
 
-            $out .= '<option ' . (($selected_vendor==$vendor) ? 'selected ' : '') . "value=\"$vendor\">$vendor</option>";
+            $sel = ($selected_vendor == $vendor) ? 'selected ' : '';
+            $vendor = htmlescape($vendor);
+            $out .= '<option ' . $sel . "value=\"$vendor\">$vendor</option>";
         }
         $out .= '</select></div></div></div>';
 
@@ -348,7 +352,9 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
         $out .= '<option disabled ' . (($selected_product==NULL) ? 'selected ' : '') . ' value="-DEFAULT-">-- ' . __('SELECT A PRODUCT') . ' --</option>';
         foreach ($products as $product) {
 
-            $out .= '<option ' . (($selected_product==$product) ? 'selected ' : '') . "value=\"$product\">$product</option>";
+            $sel = ($selected_product == $product) ? 'selected ' : '';
+            $product = htmlescape($product);
+            $out .= '<option ' . $sel . "value=\"$product\">$product</option>";
         }
         $out .= '</select></div></div></div></div>';
 

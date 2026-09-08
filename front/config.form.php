@@ -8,6 +8,9 @@ if (!$plugin->isInstalled('nvd') || !$plugin->isActivated('nvd')) {
    Html::displayNotFoundError();
 }
 
+// Only users who can update the GLPI configuration may change the NVD API key
+Session::checkRight('config', UPDATE);
+
 if (isset($_POST['newApiKey'])) {
 
     $newApiKey = $_POST['newApiKey'];

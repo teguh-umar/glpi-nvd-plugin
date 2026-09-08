@@ -287,7 +287,7 @@ class PluginNvdVuln extends CommonDBTM {
 
                 [$id, $name] = explode(':', $version);
 
-                $instances[] = '<a href="' . "{$CFG_GLPI['root_doc']}/front/softwareversion.form.php?id=" . $id . '">' . $name . '</a>';
+                $instances[] = '<a href="' . "{$CFG_GLPI['root_doc']}/front/softwareversion.form.php?id=" . (int)$id . '">' . htmlescape($name) . '</a>';
             }
 
             $vulnerabilities[$row['VULN_ID']] = implode(', ', $instances);
@@ -384,7 +384,7 @@ class PluginNvdVuln extends CommonDBTM {
 
             //Transform names and IDs to liks to vulnerable programs in GLPI
             foreach ($res_2 as $id_2 => $row_2) {
-                $programs[] = '<a href="' . "{$CFG_GLPI['root_doc']}/front/software.form.php?id=" . $row_2['id'] . '">' . $row_2['name'] . '</a>';
+                $programs[] = '<a href="' . "{$CFG_GLPI['root_doc']}/front/software.form.php?id=" . (int)$row_2['id'] . '">' . htmlescape($row_2['name']) . '</a>';
             }
             
             $vulnerabilities[$row['VULN_ID']] = implode(',', $programs);
@@ -765,10 +765,10 @@ class PluginNvdVuln extends CommonDBTM {
 
             $table .= '<tr>';
             $table .= '<td class="centered">' . PluginNvdCverecord::getCvssScoreSeverity($row['base_score']) . '</td>';
-            $table .= '<td class="centered">' . $row['base_score'] . '</td>';
-            $table .= '<td class="centered"> <a href="' . PluginNvdCverecord::getCveNvdUrl($row['cve_id']) . '">' . $row['cve_id'] . '</a></td>';
+            $table .= '<td class="centered">' . htmlescape($row['base_score']) . '</td>';
+            $table .= '<td class="centered"> <a href="' . htmlescape(PluginNvdCverecord::getCveNvdUrl($row['cve_id'])) . '">' . htmlescape($row['cve_id']) . '</a></td>';
             $table .= '<td class="centered" ' . $configuration_warning . '</td>';
-            $table .= '<td class="justified">' . $description . '</td>';
+            $table .= '<td class="justified">' . htmlescape($description) . '</td>';
             $table .= !is_null($instance_name) ? '<td class="centered">' . $vulnerableInstances[$id] . '</td>' : '';
             $table .= '</tr>';
         }

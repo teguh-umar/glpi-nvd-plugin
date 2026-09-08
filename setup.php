@@ -2,8 +2,9 @@
 
 use Glpi\Plugin\Hooks;
 
-define('PLUGIN_NVD_VERSION', '1.0.0');
-define('PLUGIN_NVD_MIN_GLPI', '10.0.6');
+define('PLUGIN_NVD_VERSION', '2.0.0');
+define('PLUGIN_NVD_MIN_GLPI', '11.0.0');
+define('PLUGIN_NVD_MAX_GLPI', '11.99.99');
 
 define('PLUGIN_NVD_DIR', __DIR__);
 
@@ -51,12 +52,13 @@ function plugin_version_nvd() {
       'name'           => 'NVD',
       'shortname'      => 'nvd',
       'version'        => PLUGIN_NVD_VERSION,
-      'author'         => 'Carlos Borau González',
-      'license'        => 'GLPv3',
+      'author'         => 'Carlos Borau González; GLPI 11 port by PGN ICT',
+      'license'        => 'GPL-3.0-or-later',
       'homepage'       => 'https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN',
       'requirements'   => [
          'glpi'   => [
-            'min' => PLUGIN_NVD_MIN_GLPI
+            'min' => PLUGIN_NVD_MIN_GLPI,
+            'max' => PLUGIN_NVD_MAX_GLPI
          ]
       ]
    ];

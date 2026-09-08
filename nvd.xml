@@ -75,8 +75,13 @@
     <readme>https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN/blob/main/README.md</readme>
     <authors>
         <author>Carlos Borau González</author>
+        <author>PGN ICT (GLPI 11 port)</author>
     </authors>
     <versions>
+        <version>
+            <num>2.0.0</num>
+            <compatibility>~11.0</compatibility>
+        </version>
         <version>
             <num>1.0.0</num>
             <compatibility>~10.0.6</compatibility>
@@ -85,7 +90,7 @@
     <langs>
         <lang>en_US</lang>
     </langs>
-    <license>GPLv3+</license>
+    <license>GPL-3.0-or-later</license>
     <tags>
         <en>
             <tag>CVE</tag>

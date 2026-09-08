@@ -1,5 +1,12 @@
 # NVD Plugin for GLPI
 
+- **Version:** 2.0.0
+- **Compatibility:** GLPI 11.0 (for GLPI 10, use the upstream 1.0.0 release)
+- **License:** GPL-3.0-or-later — see [LICENSE](LICENSE)
+- **Author:** Carlos Borau González; GLPI 11 port by PGN ICT
+- **Upstream:** <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>
+- See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
 ## Description
 
 The NVD plugin for GLPI has been developed as an open source project with its main objective being providing a mechanism for the GLPI framework to monitor known software vulnerabilities found on the IT assets managed by GLPI. The plugin automatically gathers software installations (programs, manufacturers and versions) from the GLPI database and queries the NVD database for vulnerabilities associated with such configurations. Found vulnerabilities are stored in the GLPI database along their corresponding relations with the vulnerable installations so that they can be later visualized by users.

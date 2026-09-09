@@ -2,7 +2,7 @@
 
 use Glpi\Plugin\Hooks;
 
-define('PLUGIN_NVD_VERSION', '2.1.0');
+define('PLUGIN_NVD_VERSION', '2.1.1');
 define('PLUGIN_NVD_MIN_GLPI', '11.0.0');
 define('PLUGIN_NVD_MAX_GLPI', '11.99.99');
 

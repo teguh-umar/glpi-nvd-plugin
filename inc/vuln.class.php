@@ -659,6 +659,13 @@ class PluginNvdVuln extends CommonDBTM {
             $item_type = $row['itemtype'];
             $ID = $row['items_id'];
 
+            // `itemtype` is a class name (e.g. "Computer"); resolve the table and
+            // form URL through GLPI so the case is right on case-sensitive MySQL.
+            if (!is_string($item_type) || !class_exists($item_type) || !is_subclass_of($item_type, CommonDBTM::class)) {
+                continue;
+            }
+            $table = $item_type::getTable();
+
             [$name, $version, $kernel, $kernelVersion, $servicePack] = PluginNvdDatabaseutils::requestOSdata($row);
 
             $installationData = PluginNvdCpe::getOSInstallationData($name, $version, $kernel, $kernelVersion, $servicePack);
@@ -667,14 +674,10 @@ class PluginNvdVuln extends CommonDBTM {
 
                 $configuration = $installationData['configuration'];
 
-                $table = 'glpi_' . $item_type . 's';
-
                 /***********************************************************************************************
                  * Request device names for every device
                  *
-                 *  SELECT name
-                 *  FROM 'glpi_' . $item_type . 's'
-                 *  WHERE id = $ID
+                 *  SELECT name FROM <item table> WHERE id = $ID
                  **********************************************************************************************/
                 $res_2 = $DB->request(['SELECT' => 'name',
                                     'FROM' => $table,
@@ -682,7 +685,7 @@ class PluginNvdVuln extends CommonDBTM {
 
                 $deviceName = ($res_2->numrows() == 1) ? $res_2->current()['name'] : 'UNNAMED_DEVICE';
 
-                $deviceConfigurations[$configuration][] = '<a href="' . "{$CFG_GLPI['root_doc']}/front/$item_type.form.php?id=" . (int)$ID . '">' . htmlescape($deviceName) . '</a>';
+                $deviceConfigurations[$configuration][] = '<a href="' . htmlescape($item_type::getFormURLWithID((int)$ID)) . '">' . htmlescape($deviceName) . '</a>';
             }
         }
 

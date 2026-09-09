@@ -5,6 +5,20 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-09-09
+
+### Fixed
+
+- OS-vulnerability rendering built table names and form URLs by string
+  concatenation (`'glpi_' . $itemtype . 's'`, `front/$itemtype.form.php`)
+  using the raw PascalCase `itemtype`, producing `glpi_Computers` /
+  `front/Computer.form.php`. This fails on case-sensitive MySQL (Linux):
+  *Table 'glpi_Computers' doesn't exist*. Now resolved through
+  `$itemtype::getTable()` and `$itemtype::getFormURLWithID()`, with a
+  `class_exists` / `is_subclass_of(CommonDBTM)` guard. Affected the new
+  Tools page and the Central "Vulnerabilities" tab whenever OS vulnerability
+  data was present.
+
 ## [2.1.0] - 2026-09-09
 
 ### Added
@@ -93,6 +107,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.1.1]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN
 [2.1.0]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN
 [2.0.0]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN
 [1.0.0]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN

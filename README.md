@@ -1,6 +1,6 @@
 # NVD Plugin for GLPI
 
-- **Version:** 2.0.0
+- **Version:** 2.1.0
 - **Compatibility:** GLPI 11.0 (for GLPI 10, use the upstream 1.0.0 release)
 - **License:** GPL-3.0-or-later — see [LICENSE](LICENSE)
 - **Author:** Carlos Borau González; GLPI 11 port by PGN ICT
@@ -33,7 +33,10 @@ The plugin uses a scheduled task to query the NVD database for vulnerabilities r
 
 ## Visualization of vulnerabilities
 
-Stored vulnerabilities can be visualized from three different places within GLPI:
+Stored vulnerabilities can be visualized from within GLPI:
+
+- **Tools → NVD Vulnerabilities** (since 2.1.0): a dedicated page listing every downloaded CVE and the assets it affects, with a severity summary and client-side search / severity filter / column sort. Same data as the Central dashboard view below, in its own menu entry.
+
 
 - **Dashboard**: This view contains every vulnerability present on any device managed by GLPI. The view is divided into two different sections containing vulnerabilities ralated to software versions and OS versions respectively. These vulnerabilities are displayed in the form of a table with a row for every vulnerability and each column containing the CVE identifier, description, CVSS score, severity and a list of the devices in which the vulnerability can be found.
 

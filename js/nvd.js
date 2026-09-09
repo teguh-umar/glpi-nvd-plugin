@@ -143,3 +143,84 @@ function escapeRegExp(string) {
 function changeSelectedValue(select, value) {
     select.value = value;
 }
+
+/**
+ * NVD Vulnerabilities page (Tools > NVD Vulnerabilities).
+ *
+ * Wires the client-side search box, severity filter and sortable column
+ * headers for each rendered vulnerability table. All operations act on the
+ * <tr> rows already in the DOM - no server round-trip.
+ */
+function nvdVulnPageInit() {
+
+    document.querySelectorAll(".nvd-vuln-toolbar").forEach(function (toolbar) {
+
+        var table = document.getElementById(toolbar.dataset.target);
+        if (!table) { return; }
+
+        var tbody      = table.tBodies[0];
+        var searchBox  = toolbar.querySelector(".nvd-vuln-search");
+        var sevFilter  = toolbar.querySelector(".nvd-vuln-severity-filter");
+        var countLabel = toolbar.querySelector(".nvd-vuln-count");
+
+        function applyFilters() {
+            var term = (searchBox && searchBox.value ? searchBox.value : "").trim().toLowerCase();
+            var sev  = sevFilter && sevFilter.value ? sevFilter.value : "";
+            var shown = 0;
+
+            Array.prototype.forEach.call(tbody.rows, function (row) {
+                var matchText = term === "" || (row.dataset.search || "").indexOf(term) !== -1;
+                var matchSev  = sev === "" || row.dataset.severity === sev;
+                var visible   = matchText && matchSev;
+                row.style.display = visible ? "" : "none";
+                if (visible) { shown++; }
+            });
+
+            if (countLabel) {
+                countLabel.textContent = shown + " / " + tbody.rows.length;
+            }
+        }
+
+        if (searchBox) { searchBox.addEventListener("input", applyFilters); }
+        if (sevFilter) { sevFilter.addEventListener("change", applyFilters); }
+
+        table.querySelectorAll("th.nvd-sortable").forEach(function (th) {
+
+            th.style.cursor = "pointer";
+
+            th.addEventListener("click", function () {
+
+                var key = th.dataset.sortkey;
+                var asc = th.dataset.sortDir !== "asc";
+
+                table.querySelectorAll("th.nvd-sortable").forEach(function (other) {
+                    if (other !== th) { delete other.dataset.sortDir; }
+                });
+                th.dataset.sortDir = asc ? "asc" : "desc";
+
+                var rows = Array.prototype.slice.call(tbody.rows);
+
+                rows.sort(function (a, b) {
+                    var va, vb;
+                    if (key === "score") {
+                        va = parseFloat(a.dataset.score) || 0;
+                        vb = parseFloat(b.dataset.score) || 0;
+                    } else if (key === "severity") {
+                        va = parseInt(a.dataset.severityRank, 10) || 0;
+                        vb = parseInt(b.dataset.severityRank, 10) || 0;
+                    } else {
+                        va = (a.dataset.cve || "").toLowerCase();
+                        vb = (b.dataset.cve || "").toLowerCase();
+                    }
+                    if (va < vb) { return asc ? -1 : 1; }
+                    if (va > vb) { return asc ? 1 : -1; }
+                    return 0;
+                });
+
+                rows.forEach(function (row) { tbody.appendChild(row); });
+            });
+        });
+
+        applyFilters();
+    });
+}

@@ -467,19 +467,101 @@ class PluginNvdVuln extends CommonDBTM {
      */
     private static function displayForDashboard($NsoftwareVulns, $NsystemVulns){
 
-        global $DB, $CFG_GLPI;
+        $tally = [];
 
-        /***************************\
-        |* Software Vulnerabilities |
-        \***************************/
+        $softwareList = self::gatherSoftwareVulnList($tally);
+        $systemList   = self::gatherSystemVulnList($tally);
+
+        // Display both software and system vulnerabilities organized with nav tabs
+        self::displayNavTabs($softwareList, $NsoftwareVulns, $systemList, $NsystemVulns);
+    }
+
+    /**
+     * Standalone page (Tools > NVD Vulnerabilities) listing every downloaded CVE
+     * and the assets it affects, with a severity summary and client-side
+     * search / severity filter / column sort.
+     *
+     * @since 2.1.0
+     *
+     * @return void
+     */
+    public static function showVulnerabilityPage() {
+
+        $tally = ['CRITICAL' => 0, 'HIGH' => 0, 'MEDIUM' => 0, 'LOW' => 0, 'NONE' => 0];
+
+        $softwareList = self::gatherSoftwareVulnList($tally, true);
+        $systemList   = self::gatherSystemVulnList($tally, true);
+
+        [$totalVulns, $NsoftwareVulns, $NsystemVulns] = self::countForDashboard();
+
+        echo self::renderSeveritySummary($tally, $totalVulns);
+
+        if ($totalVulns == 0) {
+            echo '<div class="nvd-vuln-empty">' . __s('No vulnerabilities have been downloaded yet. Set the NVD API key in Setup > General > NVD Plugin, associate CPE names to your software, then run the "UpdateVulnTask" automatic action.') . '</div>';
+            return;
+        }
+
+        self::displayNavTabs($softwareList, $NsoftwareVulns, $systemList, $NsystemVulns);
+
+        echo Html::scriptBlock('if (window.nvdVulnPageInit) { nvdVulnPageInit(); }');
+    }
+
+    /**
+     * Render the Critical / High / Medium / Low / total severity summary strip.
+     *
+     * @since 2.1.0
+     *
+     * @param array $tally         Map of severity label => count
+     * @param int   $totalVulns    Total number of distinct vulnerabilities
+     *
+     * @return string
+     */
+    private static function renderSeveritySummary(array $tally, $totalVulns) {
+
+        $cards = [
+            'CRITICAL' => __('Critical'),
+            'HIGH'     => __('High'),
+            'MEDIUM'   => __('Medium'),
+            'LOW'      => __('Low'),
+        ];
+
+        $out = '<div class="nvd-vuln-summary">';
+        $out .= '<div class="nvd-vuln-card nvd-sev-total"><span class="nvd-vuln-card-num">' . (int)$totalVulns . '</span><span class="nvd-vuln-card-label">' . __s('Total') . '</span></div>';
+
+        foreach ($cards as $key => $label) {
+            $out .= '<div class="nvd-vuln-card nvd-sev-' . strtolower($key) . '">'
+                  . '<span class="nvd-vuln-card-num">' . (int)($tally[$key] ?? 0) . '</span>'
+                  . '<span class="nvd-vuln-card-label">' . htmlescape($label) . '</span>'
+                  . '</div>';
+        }
+
+        $out .= '</div>';
+
+        return $out;
+    }
+
+    /**
+     * Build the "software vulnerabilities" table (every CVE affecting an
+     * installed software version, and the assets running it).
+     *
+     * @since 2.1.0
+     *
+     * @param array $severityTally  Filled in place with severity label => count
+     * @param bool  $interactive    Emit the search / filter toolbar + sortable headers
+     *
+     * @return string  HTML, or '' when there are no software vulnerabilities
+     */
+    private static function gatherSoftwareVulnList(&$severityTally, $interactive=FALSE) {
+
+        global $DB, $CFG_GLPI;
 
         /***********************************************************************************************
          * Request every vulnerability registered and the devices associated with it
-         * 
-         *  SELECT vuln_id AS VULN_ID, 
+         *
+         *  SELECT vuln_id AS VULN_ID,
          *       GROUP_CONCAT(DISTINCT itemtype, ':', items_id ORDER BY itemtype, items_id) AS instances
          *  FROM glpi_plugin_nvd_vulnerable_software_versions, glpi_items_softwareversions
-         *  WHERE glpi_plugin_nvd_vulnerable_software_versions.softwareversions_id = 
+         *  WHERE glpi_plugin_nvd_vulnerable_software_versions.softwareversions_id =
          *        glpi_items_softwareversions.softwareversions_id
          *  GROUP BY vuln_id
          **********************************************************************************************/
@@ -513,7 +595,7 @@ class PluginNvdVuln extends CommonDBTM {
 
                 /***********************************************************************************************
                  * Request device names for the device IDs associated with a vulnerability
-                 * 
+                 *
                  *  SELECT name
                  *  FROM 'glpi_' . $item_type . 's'
                  *  WHERE id IN $IDs
@@ -531,27 +613,38 @@ class PluginNvdVuln extends CommonDBTM {
             // Transform names and IDs to liks to vulnerable devices in GLPI
             foreach ($instance_IDs as $item_type => $ID_names) {
                 foreach ($ID_names as $ID => $name) {
-                    $instances[] = '<a href="' . "{$CFG_GLPI['root_doc']}/front/$item_type.form.php?id=" . $ID . '">' . $name . '</a>';
+                    $instances[] = '<a href="' . "{$CFG_GLPI['root_doc']}/front/$item_type.form.php?id=" . (int)$ID . '">' . htmlescape($name) . '</a>';
                 }
             }
 
-            $vulnerabilities[$row['VULN_ID']] = implode(',', $instances);
+            $vulnerabilities[$row['VULN_ID']] = implode(', ', $instances);
         }
 
-        //Request information on the obtained CVE records 
+        //Request information on the obtained CVE records
         $res = self::requestVulnerabilities(array_keys($vulnerabilities));
 
-        //Display list of software vulnerabilities
-        $softwareList = self::displayVulnerabilityList($res, $vulnerabilities, __('Devices'));
+        return self::displayVulnerabilityList($res, $vulnerabilities, __('Devices'), NULL, $severityTally, $interactive);
+    }
 
-        /**********************************\
-        |* Operating Sytem Vulnerabilities |
-        \**********************************/
+    /**
+     * Build the "operating system vulnerabilities" table (every CVE affecting an
+     * installed OS version, and the assets running it).
+     *
+     * @since 2.1.0
+     *
+     * @param array $severityTally  Filled in place with severity label => count
+     * @param bool  $interactive    Emit the search / filter toolbar + sortable headers
+     *
+     * @return string  HTML, or '' when there are no OS vulnerabilities
+     */
+    private static function gatherSystemVulnList(&$severityTally, $interactive=FALSE) {
+
+        global $DB, $CFG_GLPI;
 
         /***********************************************************************************************
          * Request every operating system version and the devices associated with it
-         * 
-         *  SELECT items_id, itemtype, operatingsystems_id, operatingsystemversions_id, 
+         *
+         *  SELECT items_id, itemtype, operatingsystems_id, operatingsystemversions_id,
          *      operatingsystemkernelversions_id, operatingsystemservicepacks_id
          *  FROM glpi_items_operatingsystems
          **********************************************************************************************/
@@ -578,7 +671,7 @@ class PluginNvdVuln extends CommonDBTM {
 
                 /***********************************************************************************************
                  * Request device names for every device
-                 * 
+                 *
                  *  SELECT name
                  *  FROM 'glpi_' . $item_type . 's'
                  *  WHERE id = $ID
@@ -589,13 +682,13 @@ class PluginNvdVuln extends CommonDBTM {
 
                 $deviceName = ($res_2->numrows() == 1) ? $res_2->current()['name'] : 'UNNAMED_DEVICE';
 
-                $deviceConfigurations[$configuration][] = '<a href="' . "{$CFG_GLPI['root_doc']}/front/$item_type.form.php?id=" . $ID . '">' . $deviceName . '</a>';
+                $deviceConfigurations[$configuration][] = '<a href="' . "{$CFG_GLPI['root_doc']}/front/$item_type.form.php?id=" . (int)$ID . '">' . htmlescape($deviceName) . '</a>';
             }
         }
 
         /***********************************************************************************************
          * Request every vulnerability registered and the configurations associated with it
-         * 
+         *
          *  SELECT vuln_id AS VULN_ID, GROUP_CONCAT(system_configuration) AS configurations
          *  FROM glpi_plugin_nvd_vulnerable_system_versions
          *  GROUP BY vuln_id
@@ -613,21 +706,17 @@ class PluginNvdVuln extends CommonDBTM {
             $devices = [];
 
             foreach ($configurations as $configuration) {
-                
-                $devices = array_merge($devices, $deviceConfigurations[$configuration]);
+
+                $devices = array_merge($devices, $deviceConfigurations[$configuration] ?? []);
             }
 
-            $vulnerabilities[$row['VULN_ID']] = implode(', ', $devices);
+            $vulnerabilities[$row['VULN_ID']] = implode(', ', array_unique($devices));
         }
 
-        //Request information on the obtained CVE records 
+        //Request information on the obtained CVE records
         $res = self::requestVulnerabilities(array_keys($vulnerabilities));
 
-        // Display list of OS vulnerabilities
-        $systemList = self::displayVulnerabilityList($res, $vulnerabilities, __('Devices'));;
-
-        // Display both software and system vulnerabilities organized with nav tabs
-        self::displayNavTabs($softwareList, $NsoftwareVulns, $systemList, $NsystemVulns);
+        return self::displayVulnerabilityList($res, $vulnerabilities, __('Devices'), NULL, $severityTally, $interactive);
     }
 
     /**
@@ -730,30 +819,52 @@ class PluginNvdVuln extends CommonDBTM {
      *
      * @return string           
      */
-    private static function displayVulnerabilityList($DBQueryResult, $vulnerableInstances, $instance_name, $filters=NULL) {
+    private static function displayVulnerabilityList($DBQueryResult, $vulnerableInstances, $instance_name, $filters=NULL, &$severityTally=NULL, $interactive=FALSE) {
 
         // If no vulnerabilities are found do not display anything
         if (!$vulnerableInstances) { return ''; }
 
-        $table = '<table class="center vuln-table">';
+        // Severity -> sort rank (higher = more severe), used for client-side sorting
+        $severity_ranks = ['CRITICAL' => 4, 'HIGH' => 3, 'MEDIUM' => 2, 'LOW' => 1, 'NONE' => 0];
+
+        $table_id = 'nvd-vuln-' . substr(md5(uniqid('', true)), 0, 8);
+
+        $out = '';
+
+        if ($interactive) {
+            $out .= '<div class="nvd-vuln-toolbar" data-target="' . $table_id . '">';
+            $out .= '<input type="text" class="nvd-vuln-search" placeholder="' . __s('Search a CVE, description or asset') . '">';
+            $out .= '<select class="nvd-vuln-severity-filter">';
+            $out .= '<option value="">' . __s('All severities') . '</option>';
+            foreach (array_keys($severity_ranks) as $sev) {
+                $out .= '<option value="' . htmlescape($sev) . '">' . htmlescape($sev) . '</option>';
+            }
+            $out .= '</select>';
+            $out .= '<span class="nvd-vuln-count"></span>';
+            $out .= '</div>';
+        }
+
+        $sortable = $interactive ? ' nvd-sortable' : '';
+
+        $table = '<table id="' . $table_id . '" class="center vuln-table">';
 
         if (!is_null($instance_name)) {
 
             $table .= '<colgroup><col width="10%"/><col width="5%"/><col width="15%"/><col width="5%"/><col width="55%"/><col width="10%"/></colgroup>';
-        
+
         } else {
 
             $table .= '<colgroup><col width="15%"/><col width="10%"/><col width="15%"/><col width="5%"/><col width="55%"/></colgroup>';
         }
-        
-        $table .=   '<tr>';
-        $table .=   '<th class="centered">' . __('Severity') . '</th>';
-        $table .=   '<th class="centered">' . __('Score') . '</th>';
-        $table .=   '<th class="centered">CVE-ID</th>';
+
+        $table .=   '<thead><tr>';
+        $table .=   '<th class="centered' . $sortable . '" data-sortkey="severity">' . __s('Severity') . '</th>';
+        $table .=   '<th class="centered' . $sortable . '" data-sortkey="score">' . __s('Score') . '</th>';
+        $table .=   '<th class="centered' . $sortable . '" data-sortkey="cve">CVE-ID</th>';
         $table .=   '<th class="centered">' . mb_chr(0x2755, 'UTF-8') . '</th>';
-        $table .=   '<th class="centered">' . __('Description') . '</th>';
-        $table .=   !is_null($instance_name) ? '<th class="centered">' . $instance_name . '</th>' : '';
-        $table .=   '</tr>';
+        $table .=   '<th class="centered">' . __s('Description') . '</th>';
+        $table .=   !is_null($instance_name) ? '<th class="centered">' . htmlescape($instance_name) . '</th>' : '';
+        $table .=   '</tr></thead><tbody>';
 
         foreach ($DBQueryResult as $id => $row) {
 
@@ -763,19 +874,32 @@ class PluginNvdVuln extends CommonDBTM {
             $configurations = self::requestConfigurations($id, $filters);
             $configuration_warning = PluginNvdCverecord::parseConfiguration($configurations, !is_null($filters));
 
-            $table .= '<tr>';
-            $table .= '<td class="centered">' . PluginNvdCverecord::getCvssScoreSeverity($row['base_score']) . '</td>';
+            $severity = PluginNvdCverecord::getCvssScoreSeverity($row['base_score']);
+
+            if (is_array($severityTally)) {
+                $severityTally[$severity] = ($severityTally[$severity] ?? 0) + 1;
+            }
+
+            $instances_html = !is_null($instance_name) ? ($vulnerableInstances[$id] ?? '') : '';
+            $search_blob = mb_strtolower(trim($row['cve_id'] . ' ' . $description . ' ' . strip_tags($instances_html)));
+
+            $table .= '<tr data-severity="' . htmlescape($severity) . '"'
+                    . ' data-severity-rank="' . ($severity_ranks[$severity] ?? 0) . '"'
+                    . ' data-score="' . htmlescape((float)$row['base_score']) . '"'
+                    . ' data-cve="' . htmlescape($row['cve_id']) . '"'
+                    . ' data-search="' . htmlescape($search_blob) . '">';
+            $table .= '<td class="centered">' . htmlescape($severity) . '</td>';
             $table .= '<td class="centered">' . htmlescape($row['base_score']) . '</td>';
-            $table .= '<td class="centered"> <a href="' . htmlescape(PluginNvdCverecord::getCveNvdUrl($row['cve_id'])) . '">' . htmlescape($row['cve_id']) . '</a></td>';
+            $table .= '<td class="centered"> <a href="' . htmlescape(PluginNvdCverecord::getCveNvdUrl($row['cve_id'])) . '" target="_blank" rel="noopener">' . htmlescape($row['cve_id']) . '</a></td>';
             $table .= '<td class="centered" ' . $configuration_warning . '</td>';
             $table .= '<td class="justified">' . htmlescape($description) . '</td>';
-            $table .= !is_null($instance_name) ? '<td class="centered">' . $vulnerableInstances[$id] . '</td>' : '';
+            $table .= !is_null($instance_name) ? '<td class="centered">' . $instances_html . '</td>' : '';
             $table .= '</tr>';
         }
 
-        $table .= '</table>';
+        $table .= '</tbody></table>';
 
-        return $table;
+        return $out . $table;
     }
 
     /**

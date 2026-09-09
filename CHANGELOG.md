@@ -5,6 +5,32 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-09-09
+
+### Added
+
+- **New page: Tools → NVD Vulnerabilities.** A standalone view listing every
+  CVE downloaded from the NVD API and the assets it affects, split into
+  *Software* and *OS* tabs (the same data that was previously only reachable
+  as a tab on the Central page).
+  - Severity summary strip (Total / Critical / High / Medium / Low counts).
+  - Per-table client-side search (CVE id, description, affected asset) and
+    severity filter.
+  - Sortable Severity / Score / CVE-ID columns.
+  - Empty-state hint when no vulnerabilities have been downloaded yet.
+  - Access gated on the GLPI configuration right, same as the plugin's other
+    screens.
+
+### Changed
+
+- `PluginNvdVuln::displayForDashboard()` internals split into
+  `gatherSoftwareVulnList()` / `gatherSystemVulnList()` so the Central tab and
+  the new page share one code path. The Central "Vulnerabilities" tab is
+  unchanged for users.
+- Vulnerability tables now use `<thead>`/`<tbody>` and carry
+  `data-severity` / `data-score` / `data-cve` / `data-search` attributes on
+  each row.
+
 ## [2.0.0] - 2026-09-08
 
 GLPI 11 compatibility release. Ports the upstream 1.0.0 plugin (which targeted
@@ -67,5 +93,6 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.1.0]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN
 [2.0.0]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN
 [1.0.0]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN

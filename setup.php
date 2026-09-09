@@ -2,7 +2,7 @@
 
 use Glpi\Plugin\Hooks;
 
-define('PLUGIN_NVD_VERSION', '2.0.0');
+define('PLUGIN_NVD_VERSION', '2.1.0');
 define('PLUGIN_NVD_MIN_GLPI', '11.0.0');
 define('PLUGIN_NVD_MAX_GLPI', '11.99.99');
 
@@ -34,6 +34,11 @@ function plugin_init_nvd() {
    Plugin::registerClass(PluginNvdSoftwarecpe::class, ['addtabon' =>
       [Software::class
    ]]);
+
+   Plugin::registerClass(PluginNvdMenu::class);
+
+   // Add a "NVD Vulnerabilities" entry to the core Tools sector
+   $PLUGIN_HOOKS[Hooks::MENU_TOADD]['nvd'] = ['tools' => 'PluginNvdMenu'];
 
    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['nvd'] = 'js/nvd.js';
    $PLUGIN_HOOKS[Hooks::ADD_CSS]['nvd'] = 'css/nvd.css';

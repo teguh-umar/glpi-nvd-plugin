@@ -1,6 +1,6 @@
 # NVD Plugin for GLPI
 
-- **Version:** 2.1.1
+- **Version:** 2.2.0
 - **Compatibility:** GLPI 11.0 (for GLPI 10, use the upstream 1.0.0 release)
 - **License:** GPL-3.0-or-later — see [LICENSE](LICENSE)
 - **Author:** Carlos Borau González; GLPI 11 port by PGN ICT

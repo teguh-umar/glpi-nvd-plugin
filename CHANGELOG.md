@@ -5,6 +5,23 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-09-10
+
+### Changed
+
+- **NVD Vulnerabilities page restyled** to match the GLPI 11 look (Tabler
+  cards, KPI tiles, badges) instead of the plugin's own bare CSS:
+  - Severity summary rendered as a row of `card` KPI tiles
+    (Total / Critical / High / Medium / Low) with GLPI's semantic colours.
+  - Each vulnerability table wrapped in a `card`; toolbar uses GLPI form
+    controls (`form-control`, `form-select`, search icon); tables use
+    `table table-hover table-sm`.
+  - Severity column shown as a coloured badge.
+  - Empty state shown as a card.
+  - The page no longer depends on `css/nvd.css` loading — it ships a small
+    inline `<style>` and relies on GLPI's bundled Tabler classes.
+- The Central "Vulnerabilities" tab keeps its previous plain-table look.
+
 ## [2.1.1] - 2026-09-09
 
 ### Fixed
@@ -107,6 +124,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.2.0]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN
 [2.1.1]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN
 [2.1.0]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN
 [2.0.0]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN

@@ -24,85 +24,8 @@
     background-color: rgba(128, 128, 128, 0.12);
 }
 
-.vuln-table th.nvd-sortable::after {
-    content: " \2195";
-    opacity: 0.4;
-}
-
-.vuln-table th.nvd-sortable[data-sort-dir="asc"]::after {
-    content: " \2191";
-    opacity: 1;
-}
-
-.vuln-table th.nvd-sortable[data-sort-dir="desc"]::after {
-    content: " \2193";
-    opacity: 1;
-}
-
-/* NVD Vulnerabilities page */
-
-.nvd-vuln-summary {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-    margin: 12px 0;
-}
-
-.nvd-vuln-card {
-    min-width: 90px;
-    padding: 10px 16px;
-    border-radius: 6px;
-    text-align: center;
-    border: 1px solid rgba(128, 128, 128, 0.3);
-}
-
-.nvd-vuln-card-num {
-    display: block;
-    font-size: 1.6rem;
-    font-weight: 700;
-    line-height: 1.1;
-}
-
-.nvd-vuln-card-label {
-    display: block;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.nvd-sev-critical { background-color: rgba(183, 28, 28, 0.15); border-color: #b71c1c; }
-.nvd-sev-high     { background-color: rgba(230, 81, 0, 0.15);  border-color: #e65100; }
-.nvd-sev-medium   { background-color: rgba(245, 179, 0, 0.15); border-color: #f5b300; }
-.nvd-sev-low      { background-color: rgba(46, 125, 50, 0.15); border-color: #2e7d32; }
-
-.nvd-vuln-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
-    margin: 10px 0;
-}
-
-.nvd-vuln-toolbar .nvd-vuln-search {
-    min-width: 260px;
-    padding: 4px 8px;
-}
-
-.nvd-vuln-count {
-    font-size: 0.85rem;
-    opacity: 0.7;
-}
-
-.nvd-vuln-empty {
-    max-width: 640px;
-    margin: 24px auto;
-    padding: 16px;
-    text-align: center;
-    border: 1px dashed rgba(128, 128, 128, 0.5);
-    border-radius: 6px;
-}
+/* The NVD Vulnerabilities page (Tools) styles itself with an inline <style>
+   block + GLPI's bundled Tabler classes - nothing needed here for it. */
 
 .nvd_cpe_div {
     width: 100%;

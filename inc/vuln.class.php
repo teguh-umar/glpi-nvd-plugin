@@ -494,20 +494,40 @@ class PluginNvdVuln extends CommonDBTM {
 
         [$totalVulns, $NsoftwareVulns, $NsystemVulns] = self::countForDashboard();
 
+        echo '<div class="nvd-vuln-page container-fluid mt-2">';
+
+        echo <<<'CSS'
+<style>
+.nvd-vuln-page .nvd-kpi { text-align: center; }
+.nvd-vuln-page .nvd-kpi-value { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+.nvd-vuln-page .nvd-kpi-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: var(--bs-secondary-color, #6c757d); }
+.nvd-vuln-page .vuln-table td, .nvd-vuln-page .vuln-table th { word-wrap: break-word; }
+.nvd-vuln-page th.nvd-sortable { cursor: pointer; user-select: none; }
+.nvd-vuln-page th.nvd-sortable::after { content: " \2195"; opacity: .35; }
+.nvd-vuln-page th.nvd-sortable[data-sort-dir="asc"]::after { content: " \2191"; opacity: 1; }
+.nvd-vuln-page th.nvd-sortable[data-sort-dir="desc"]::after { content: " \2193"; opacity: 1; }
+</style>
+CSS;
+
         echo self::renderSeveritySummary($tally, $totalVulns);
 
         if ($totalVulns == 0) {
-            echo '<div class="nvd-vuln-empty">' . __s('No vulnerabilities have been downloaded yet. Set the NVD API key in Setup > General > NVD Plugin, associate CPE names to your software, then run the "UpdateVulnTask" automatic action.') . '</div>';
+            echo '<div class="card"><div class="card-body text-center text-muted py-4">'
+               . '<i class="ti ti-shield-check" style="font-size:2rem"></i><br>'
+               . __s('No vulnerabilities have been downloaded yet. Set the NVD API key in Setup &gt; General &gt; NVD Plugin, associate CPE names to your software, then run the "UpdateVulnTask" automatic action.')
+               . '</div></div></div>';
             return;
         }
 
         self::displayNavTabs($softwareList, $NsoftwareVulns, $systemList, $NsystemVulns);
 
+        echo '</div>';
+
         echo Html::scriptBlock('if (window.nvdVulnPageInit) { nvdVulnPageInit(); }');
     }
 
     /**
-     * Render the Critical / High / Medium / Low / total severity summary strip.
+     * Render the Total / Critical / High / Medium / Low KPI tiles.
      *
      * @since 2.1.0
      *
@@ -518,20 +538,22 @@ class PluginNvdVuln extends CommonDBTM {
      */
     private static function renderSeveritySummary(array $tally, $totalVulns) {
 
-        $cards = [
-            'CRITICAL' => __('Critical'),
-            'HIGH'     => __('High'),
-            'MEDIUM'   => __('Medium'),
-            'LOW'      => __('Low'),
+        $tiles = [
+            ['label' => __('Total'),    'value' => (int)$totalVulns,            'cls' => ''],
+            ['label' => __('Critical'), 'value' => (int)($tally['CRITICAL'] ?? 0), 'cls' => 'text-red'],
+            ['label' => __('High'),     'value' => (int)($tally['HIGH'] ?? 0),     'cls' => 'text-orange'],
+            ['label' => __('Medium'),   'value' => (int)($tally['MEDIUM'] ?? 0),   'cls' => 'text-yellow'],
+            ['label' => __('Low'),      'value' => (int)($tally['LOW'] ?? 0),      'cls' => 'text-green'],
         ];
 
-        $out = '<div class="nvd-vuln-summary">';
-        $out .= '<div class="nvd-vuln-card nvd-sev-total"><span class="nvd-vuln-card-num">' . (int)$totalVulns . '</span><span class="nvd-vuln-card-label">' . __s('Total') . '</span></div>';
+        $out = '<div class="row row-cards mb-3">';
 
-        foreach ($cards as $key => $label) {
-            $out .= '<div class="nvd-vuln-card nvd-sev-' . strtolower($key) . '">'
-                  . '<span class="nvd-vuln-card-num">' . (int)($tally[$key] ?? 0) . '</span>'
-                  . '<span class="nvd-vuln-card-label">' . htmlescape($label) . '</span>'
+        foreach ($tiles as $tile) {
+            $out .= '<div class="col">'
+                  . '<div class="card nvd-kpi"><div class="card-body">'
+                  . '<div class="nvd-kpi-value ' . $tile['cls'] . '">' . $tile['value'] . '</div>'
+                  . '<div class="nvd-kpi-label">' . htmlescape($tile['label']) . '</div>'
+                  . '</div></div>'
                   . '</div>';
         }
 
@@ -832,24 +854,34 @@ class PluginNvdVuln extends CommonDBTM {
 
         $table_id = 'nvd-vuln-' . substr(md5(uniqid('', true)), 0, 8);
 
-        $out = '';
+        $card_open  = $interactive ? '<div class="card mt-2"><div class="card-body">' : '';
+        $card_close = $interactive ? '</div></div>' : '';
+
+        $out = $card_open;
 
         if ($interactive) {
-            $out .= '<div class="nvd-vuln-toolbar" data-target="' . $table_id . '">';
-            $out .= '<input type="text" class="nvd-vuln-search" placeholder="' . __s('Search a CVE, description or asset') . '">';
-            $out .= '<select class="nvd-vuln-severity-filter">';
+            $out .= '<div class="nvd-vuln-toolbar d-flex flex-wrap gap-2 align-items-center mb-2" data-target="' . $table_id . '">';
+            $out .= '<div class="input-icon flex-grow-1" style="min-width:240px">';
+            $out .= '<span class="input-icon-addon"><i class="ti ti-search"></i></span>';
+            $out .= '<input type="text" class="form-control nvd-vuln-search" placeholder="' . __s('Search a CVE, description or asset') . '">';
+            $out .= '</div>';
+            $out .= '<select class="form-select nvd-vuln-severity-filter" style="max-width:180px">';
             $out .= '<option value="">' . __s('All severities') . '</option>';
             foreach (array_keys($severity_ranks) as $sev) {
                 $out .= '<option value="' . htmlescape($sev) . '">' . htmlescape($sev) . '</option>';
             }
             $out .= '</select>';
-            $out .= '<span class="nvd-vuln-count"></span>';
+            $out .= '<span class="nvd-vuln-count text-muted small"></span>';
             $out .= '</div>';
         }
 
-        $sortable = $interactive ? ' nvd-sortable' : '';
+        $sortable    = $interactive ? ' nvd-sortable' : '';
+        $table_class = $interactive
+            ? 'table table-hover table-sm card-table vuln-table'
+            : 'center vuln-table';
 
-        $table = '<table id="' . $table_id . '" class="center vuln-table">';
+        $table = ($interactive ? '<div class="table-responsive">' : '')
+               . '<table id="' . $table_id . '" class="' . $table_class . '">';
 
         if (!is_null($instance_name)) {
 
@@ -891,7 +923,16 @@ class PluginNvdVuln extends CommonDBTM {
                     . ' data-score="' . htmlescape((float)$row['base_score']) . '"'
                     . ' data-cve="' . htmlescape($row['cve_id']) . '"'
                     . ' data-search="' . htmlescape($search_blob) . '">';
-            $table .= '<td class="centered">' . htmlescape($severity) . '</td>';
+            $badge_class = [
+                'CRITICAL' => 'bg-red', 'HIGH' => 'bg-orange', 'MEDIUM' => 'bg-yellow',
+                'LOW' => 'bg-green', 'NONE' => 'bg-secondary',
+            ][$severity] ?? 'bg-secondary';
+
+            $severity_cell = $interactive
+                ? '<span class="badge ' . $badge_class . '">' . htmlescape($severity) . '</span>'
+                : htmlescape($severity);
+
+            $table .= '<td class="centered">' . $severity_cell . '</td>';
             $table .= '<td class="centered">' . htmlescape($row['base_score']) . '</td>';
             $table .= '<td class="centered"> <a href="' . htmlescape(PluginNvdCverecord::getCveNvdUrl($row['cve_id'])) . '" target="_blank" rel="noopener">' . htmlescape($row['cve_id']) . '</a></td>';
             $table .= '<td class="centered" ' . $configuration_warning . '</td>';
@@ -902,7 +943,11 @@ class PluginNvdVuln extends CommonDBTM {
 
         $table .= '</tbody></table>';
 
-        return $out . $table;
+        if ($interactive) {
+            $table .= '</div>';
+        }
+
+        return $out . $table . $card_close;
     }
 
     /**
@@ -917,9 +962,9 @@ class PluginNvdVuln extends CommonDBTM {
         $out  = '<nav>';
         $out .= '<div class="nav nav-tabs" id="nav-tab" role="tablist">';
         $out .= '<button class="nav-link active" id="nav-software_vuln-tab" data-bs-toggle="tab" data-bs-target="#nav-software_vuln" type="button" role="tab" aria-controls="nav-software_vuln" aria-selected="true">';
-        $out .= __('Software Vulnerabilities') . '<div style="text-indent:2em"><span class="badge" style="text-indent:0em">' . "$NsoftwareVulns" . '</span></div></button>';
+        $out .= __s('Software Vulnerabilities') . ' <span class="badge bg-secondary ms-1">' . (int)$NsoftwareVulns . '</span></button>';
         $out .= '<button class="nav-link" id="nav-system_vuln-tab" data-bs-toggle="tab" data-bs-target="#nav-system_vuln" type="button" role="tab" aria-controls="nav-system_vuln" aria-selected="false">';
-        $out .= __('OS Vulnerabilities') . '<div style="text-indent:2em"><span class="badge" style="text-indent:0em">' . "$NsystemVulns" . '</span></div></button>';
+        $out .= __s('OS Vulnerabilities') . ' <span class="badge bg-secondary ms-1">' . (int)$NsystemVulns . '</span></button>';
         $out .= '</div>';
         $out .= '</nav>';
         $out .= '<div class="tab-content" id="nav-tabContent">';

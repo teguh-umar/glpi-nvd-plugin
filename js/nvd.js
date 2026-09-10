@@ -223,4 +223,30 @@ function nvdVulnPageInit() {
 
         applyFilters();
     });
+
+    // KPI cards: clicking one sets the severity filter on every table.
+    // Clicking the active card (or "Total") clears the filter.
+    var kpiCards = document.querySelectorAll(".nvd-kpi-btn");
+
+    function applySeverity(sev) {
+        document.querySelectorAll(".nvd-vuln-severity-filter").forEach(function (sel) {
+            sel.value = sev;
+            sel.dispatchEvent(new Event("change"));
+        });
+        kpiCards.forEach(function (c) {
+            c.classList.toggle("active", sev !== "" && c.dataset.severity === sev);
+        });
+    }
+
+    kpiCards.forEach(function (card) {
+        function onActivate() {
+            var sev = card.dataset.severity || "";
+            if (sev !== "" && card.classList.contains("active")) { sev = ""; }
+            applySeverity(sev);
+        }
+        card.addEventListener("click", onActivate);
+        card.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onActivate(); }
+        });
+    });
 }

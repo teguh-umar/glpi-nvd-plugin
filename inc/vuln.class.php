@@ -501,6 +501,9 @@ class PluginNvdVuln extends CommonDBTM {
 .nvd-vuln-page .nvd-kpi { text-align: center; }
 .nvd-vuln-page .nvd-kpi-value { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
 .nvd-vuln-page .nvd-kpi-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: var(--bs-secondary-color, #6c757d); }
+.nvd-vuln-page .nvd-kpi-btn { cursor: pointer; transition: box-shadow .12s, transform .12s; }
+.nvd-vuln-page .nvd-kpi-btn:hover { box-shadow: 0 0 0 1px var(--bs-primary, #206bc4); }
+.nvd-vuln-page .nvd-kpi-btn.active { box-shadow: 0 0 0 2px var(--bs-primary, #206bc4); transform: translateY(-1px); }
 .nvd-vuln-page .vuln-table td, .nvd-vuln-page .vuln-table th { word-wrap: break-word; }
 .nvd-vuln-page th.nvd-sortable { cursor: pointer; user-select: none; }
 .nvd-vuln-page th.nvd-sortable::after { content: " \2195"; opacity: .35; }
@@ -539,18 +542,21 @@ CSS;
     private static function renderSeveritySummary(array $tally, $totalVulns) {
 
         $tiles = [
-            ['label' => __('Total'),    'value' => (int)$totalVulns,            'cls' => ''],
-            ['label' => __('Critical'), 'value' => (int)($tally['CRITICAL'] ?? 0), 'cls' => 'text-red'],
-            ['label' => __('High'),     'value' => (int)($tally['HIGH'] ?? 0),     'cls' => 'text-orange'],
-            ['label' => __('Medium'),   'value' => (int)($tally['MEDIUM'] ?? 0),   'cls' => 'text-yellow'],
-            ['label' => __('Low'),      'value' => (int)($tally['LOW'] ?? 0),      'cls' => 'text-green'],
+            ['label' => __('Total'),    'value' => (int)$totalVulns,              'cls' => '',            'sev' => ''],
+            ['label' => __('Critical'), 'value' => (int)($tally['CRITICAL'] ?? 0), 'cls' => 'text-red',    'sev' => 'CRITICAL'],
+            ['label' => __('High'),     'value' => (int)($tally['HIGH'] ?? 0),     'cls' => 'text-orange', 'sev' => 'HIGH'],
+            ['label' => __('Medium'),   'value' => (int)($tally['MEDIUM'] ?? 0),   'cls' => 'text-yellow', 'sev' => 'MEDIUM'],
+            ['label' => __('Low'),      'value' => (int)($tally['LOW'] ?? 0),      'cls' => 'text-green',  'sev' => 'LOW'],
         ];
 
-        $out = '<div class="row row-cards mb-3">';
+        $out = '<div class="row row-cards mb-3 nvd-kpi-row">';
 
         foreach ($tiles as $tile) {
             $out .= '<div class="col">'
-                  . '<div class="card nvd-kpi"><div class="card-body">'
+                  . '<div class="card nvd-kpi nvd-kpi-btn" role="button" tabindex="0"'
+                  . ' data-severity="' . htmlescape($tile['sev']) . '"'
+                  . ' title="' . ($tile['sev'] === '' ? __s('Show all severities') : __s('Filter by this severity')) . '">'
+                  . '<div class="card-body">'
                   . '<div class="nvd-kpi-value ' . $tile['cls'] . '">' . $tile['value'] . '</div>'
                   . '<div class="nvd-kpi-label">' . htmlescape($tile['label']) . '</div>'
                   . '</div></div>'

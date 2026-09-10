@@ -743,7 +743,14 @@ CSS;
                 $devices = array_merge($devices, $deviceConfigurations[$configuration] ?? []);
             }
 
-            $vulnerabilities[$row['VULN_ID']] = implode(', ', array_unique($devices));
+            if ($devices) {
+                $vulnerabilities[$row['VULN_ID']] = implode(', ', array_unique($devices));
+            } else {
+                // The affected OS version is no longer resolvable to a live
+                // installation - still show the row, labelled with the config.
+                $vulnerabilities[$row['VULN_ID']] = '<span class="text-muted">'
+                    . htmlescape(implode(', ', array_unique($configurations))) . '</span>';
+            }
         }
 
         //Request information on the obtained CVE records
@@ -923,12 +930,18 @@ CSS;
                 $severityTally[$severity] = ($severityTally[$severity] ?? 0) + 1;
             }
 
+            // base_score is a single-precision FLOAT in the DB (e.g. 9.8 reads
+            // back as 9.800000190734863) - round for display.
+            $has_score  = ($row['base_score'] !== null && $row['base_score'] !== '');
+            $score_num  = round((float)$row['base_score'], 1);
+            $score_disp = $has_score ? number_format($score_num, 1) : '—';
+
             $instances_html = !is_null($instance_name) ? ($vulnerableInstances[$id] ?? '') : '';
             $search_blob = mb_strtolower(trim($row['cve_id'] . ' ' . $description . ' ' . strip_tags($instances_html)));
 
             $table .= '<tr data-severity="' . htmlescape($severity) . '"'
                     . ' data-severity-rank="' . ($severity_ranks[$severity] ?? 0) . '"'
-                    . ' data-score="' . htmlescape((float)$row['base_score']) . '"'
+                    . ' data-score="' . htmlescape($score_num) . '"'
                     . ' data-cve="' . htmlescape($row['cve_id']) . '"'
                     . ' data-search="' . htmlescape($search_blob) . '">';
             $badge_class = [
@@ -941,7 +954,7 @@ CSS;
                 : htmlescape($severity);
 
             $table .= '<td class="centered">' . $severity_cell . '</td>';
-            $table .= '<td class="centered">' . htmlescape($row['base_score']) . '</td>';
+            $table .= '<td class="centered">' . htmlescape($score_disp) . '</td>';
             $table .= '<td class="centered"> <a href="' . htmlescape(PluginNvdCverecord::getCveNvdUrl($row['cve_id'])) . '" target="_blank" rel="noopener">' . htmlescape($row['cve_id']) . '</a></td>';
             $table .= '<td class="centered" ' . $configuration_warning . '</td>';
             $table .= '<td class="justified">' . htmlescape($description) . '</td>';

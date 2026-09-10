@@ -5,6 +5,17 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.3] - 2026-09-10
+
+### Fixed
+
+- The **Score** column showed the raw single-precision `FLOAT` value
+  (e.g. `9.800000190734863`) instead of `9.8`. Scores are now rounded to one
+  decimal for display and in the sort key; a missing score shows `—`.
+- An OS vulnerability whose affected version can no longer be matched to a
+  live installation now still renders (labelled with the CPE configuration
+  string in muted text) instead of an empty row.
+
 ## [2.3.2] - 2026-09-10
 
 ### Fixed
@@ -164,6 +175,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.3.3]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.3.2]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.3.1]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.3.0]: https://github.com/teguh-umar/glpi-nvd-plugin

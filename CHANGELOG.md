@@ -9,13 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The NVD Vulnerabilities page's interactivity (clickable KPI tiles, search,
-  filter, column sort) could stay dead if `js/nvd.js` was evaluated after the
-  inline bootstrap ran. `js/nvd.js` now self-initialises on `.nvd-vuln-page`
-  (on `DOMContentLoaded`, or immediately if already parsed) and
-  `nvdVulnPageInit()` is idempotent, so it works regardless of script load
-  order. If it was already working, redeploy + reload PHP-FPM + hard-refresh
-  the browser to pick up the new files.
+- **`js/nvd.js` and `css/nvd.css` returned 404 on GLPI 11** — the page had no
+  interactivity (clickable KPI tiles, search, filter, column sort) and no
+  custom styling. GLPI 11 only serves plugin static assets from a `public/`
+  subdirectory, so the files moved to `public/js/nvd.js` and
+  `public/css/nvd.css`. The `ADD_JAVASCRIPT` / `ADD_CSS` hook paths are
+  unchanged (`js/nvd.js`, `css/nvd.css` — no `public/` prefix in the URL).
+- `js/nvd.js` now self-initialises on `.nvd-vuln-page` (on `DOMContentLoaded`
+  or immediately if already parsed) and `nvdVulnPageInit()` is idempotent, so
+  it no longer depends on the inline bootstrap running after the script.
 
 ## [2.3.1] - 2026-09-10
 

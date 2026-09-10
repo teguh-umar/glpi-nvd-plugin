@@ -239,6 +239,22 @@ class PluginNvdCpe {
      */
     public static function getOSInstallationData($name, $version, $kernel, $kernelVersion, $servicePack) {
 
+        // GLPI 11 inventories don't always populate the kernel dropdown. When it
+        // is missing, infer the family from the OS name so the install is still
+        // classified (the classifiers reject anything they don't recognise).
+        if (is_null($kernel) || $kernel === '') {
+
+            $n = mb_strtolower((string) $name);
+
+            if (str_contains($n, 'windows')) {
+                $kernel = 'MSWin32';
+            } elseif (str_contains($n, 'macos') || str_contains($n, 'mac os') || str_contains($n, 'os x')) {
+                $kernel = 'darwin';
+            } else {
+                $kernel = 'linux';
+            }
+        }
+
         switch ($kernel) {
 
             case 'MSWin32':
@@ -257,7 +273,7 @@ class PluginNvdCpe {
 
                 return null;
         }
-    } 
+    }
 
     /**
      * Classify Windows type operating system
@@ -372,44 +388,86 @@ class PluginNvdCpe {
      */
     private static function classifyLinuxInstallation($name, $version) {
 
-        $vendor  = null;
-        $product = null;
-        $matches = [];
+        if (is_null($name) || is_null($version)) { return null; }
 
-        foreach (func_get_args() as $arg) {
+        /*
+         * Map a case-insensitive substring of the GLPI OS name to the matching
+         * NIST CPE (vendor, product) and the version precision NVD indexes that
+         * product at: 'major' (e.g. Oracle Linux 9) or 'majorminor' (Ubuntu 22.04).
+         * More specific keys first - the first substring hit wins.
+         */
+        static $distros = [
+            'opensuse'   => ['opensuse',  'leap',                     'majorminor'],
+            'sles'       => ['suse',      'linux_enterprise_server',  'major'],
+            'suse'       => ['suse',      'linux_enterprise_server',  'major'],
+            'red hat'    => ['redhat',    'enterprise_linux',         'major'],
+            'redhat'     => ['redhat',    'enterprise_linux',         'major'],
+            'rhel'       => ['redhat',    'enterprise_linux',         'major'],
+            'oracle'     => ['oracle',    'linux',                    'major'],
+            'almalinux'  => ['almalinux', 'almalinux',                'major'],
+            'alma linux' => ['almalinux', 'almalinux',                'major'],
+            'rocky'      => ['rocky',     'rocky_linux',              'major'],
+            'centos'     => ['centos',    'centos',                   'major'],
+            'amazon'     => ['amazon',    'amazon_linux',             'major'],
+            'ubuntu'     => ['canonical', 'ubuntu_linux',             'majorminor'],
+            'debian'     => ['debian',    'debian_linux',             'majorminor'],
+        ];
 
-            // If any of the arguments is null the installation cannot be recognized
-            if (is_null($arg)){ return null; }
+        $needle = mb_strtolower($name);
+        $spec   = null;
+
+        foreach ($distros as $keyword => $candidate) {
+            if (str_contains($needle, $keyword)) { $spec = $candidate; break; }
         }
 
-        if (str_contains($name, 'Debian') and preg_match('/((\d+\.)+\d+)/', $version, $matches)) {
+        if ($spec === null) { return null; } // Unrecognized Linux installation
 
-            $vendor = 'debian';
-            $product = 'debian_linux';
+        [$vendor, $product, $precision] = $spec;
 
-        } elseif (str_contains($name, 'Ubuntu') and preg_match('/((\d+\.)+\d+)/', $version, $matches)) {
+        // The version dropdown is the first choice; some rows carry the version
+        // in the OS name instead (operatingsystemversions_id = 0).
+        $ver = self::normalizeLinuxVersion($version) ?? self::normalizeLinuxVersion($name);
 
-            $vendor = 'ubuntu';
-            $product = 'ubuntu_linux';
+        if ($ver === null) { return null; }
 
-        } elseif (str_contains($name, 'Redhat') and preg_match('/((\d+\.)+\d+)/', $version, $matches)) {
+        $parts = explode('.', $ver);
+        $ver   = ($precision === 'major' || !isset($parts[1]))
+               ? $parts[0]
+               : $parts[0] . '.' . $parts[1];
 
-            $vendor = 'redhat';
-            $product = 'enterprise_linux';
-        
-        } else { // Unrecognized Linux installation
-
-            return null;
+        // Amazon Linux encodes the major release into the CPE product name.
+        if ($vendor === 'amazon') {
+            $product = in_array($ver, ['2', '2023'], true) ? "amazon_linux_$ver" : 'amazon_linux';
         }
-
-        $version = $matches[1];
 
         return array(
             CPE_VENDOR => $vendor,
             CPE_PRODUCT => $product,
-            CPE_VERSION => $version,
-            'configuration' => "$vendor:$product:$version"
+            CPE_VERSION => $ver,
+            'configuration' => "$vendor:$product:$ver"
         );
+    }
+
+    /**
+     * Extract a clean numeric version from a GLPI OS name / version string.
+     *
+     * Strips parenthetical code names ("(Core)", "(Jammy Jellyfish)"), the "LTS"
+     * marker, and any leading product name, then returns the first dotted or
+     * plain number sequence found (e.g. "9.4", "22.04", "7").
+     *
+     * @since 2.4.0
+     *
+     * @param string|null $raw
+     *
+     * @return string|null
+     */
+    private static function normalizeLinuxVersion($raw) {
+
+        $v = (string) $raw;
+        $v = preg_replace('/\([^)]*\)/', ' ', $v); // "(Core)", "(Jammy Jellyfish)"
+        $v = preg_replace('/\bLTS\b/i', ' ', $v);
+
+        return preg_match('/(\d+(?:\.\d+)*)/', $v, $m) ? $m[1] : null;
     }
 }
 

@@ -1,6 +1,6 @@
 # NVD Plugin for GLPI
 
-- **Version:** 2.3.4
+- **Version:** 2.4.0
 - **Compatibility:** GLPI 11.0 (for GLPI 10, use the upstream 1.0.0 release)
 - **License:** GPL-3.0-or-later — see [LICENSE](LICENSE)
 - **Author:** Carlos Borau González; GLPI 11 port by PGN ICT
@@ -26,6 +26,14 @@ The NVD plugin for GLPI has been developed as an open source project with its ma
 
 1. In order to query the NVD database for vulnerabilities, the corresponding API KEY needs to be set by accesing the plugin configuration menu (*Configuration* -> *General* -> *NVD Plugin*).
 2. In order to correctcly compose the CPE names of the different programs to search for vulnerabilities they need to be manually associated with the corresponding *vendor* and *product* names for the CPE estandar. Thiscan be archieved with the interface provided on the *CPE Associations* tab located in a software's view.
+
+## Supported operating systems
+
+CVE matching for operating systems recognises (since 2.4.0): Windows (Server /
+10 / 11), macOS, Ubuntu, Debian, Red Hat Enterprise Linux, Oracle Linux, CentOS,
+Rocky Linux, AlmaLinux, SUSE / SLES, openSUSE and Amazon Linux. Other operating
+systems are ignored (no false positives). Software CVE matching is independent of
+this list and works for any software once a CPE association is set.
 
 ## Sugestions
 

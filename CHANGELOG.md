@@ -5,6 +5,31 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-09-10
+
+### Changed
+
+- **Much wider operating-system recognition for CVE matching.**
+  `PluginNvdCpe::classifyLinuxInstallation()` previously only handled Debian,
+  Ubuntu and an exact `"Redhat"` string. It now maps the GLPI OS name to the
+  right NIST CPE for: Red Hat Enterprise Linux (`"Red Hat"` / `"RedHat"` /
+  `"RHEL"`), Oracle Linux, CentOS, Rocky Linux, AlmaLinux, SUSE / SLES,
+  openSUSE, Amazon Linux (2 / 2023), plus the existing Ubuntu and Debian.
+  - The Ubuntu CPE vendor was corrected from `ubuntu` to `canonical`.
+  - Enterprise Linux distros are queried at their **major** version
+    (`cpe:2.3:o:oracle:linux:9`), Ubuntu/Debian at **major.minor**.
+- **Dirty version strings are cleaned** before building the CPE — parenthetical
+  code names (`(Core)`, `(Jammy Jellyfish)`), the `LTS` marker and a leading
+  product name (`Oracle Linux 9.4`) are stripped.
+- When a host's kernel dropdown is empty, the OS family is inferred from the
+  name instead of skipping the host.
+
+### Upgrade note
+
+The stored `system_configuration` strings change format for the newly
+recognised distros. Run the **UpdateVulnTask** automatic action after
+deploying — the task prunes the old rows and re-scans.
+
 ## [2.3.4] - 2026-09-10
 
 ### Fixed
@@ -183,6 +208,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.4.0]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.3.4]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.3.3]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.3.2]: https://github.com/teguh-umar/glpi-nvd-plugin

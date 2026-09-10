@@ -514,7 +514,7 @@ CSS;
         if ($totalVulns == 0) {
             echo '<div class="card"><div class="card-body text-center text-muted py-4">'
                . '<i class="ti ti-shield-check" style="font-size:2rem"></i><br>'
-               . __s('No vulnerabilities have been downloaded yet. Set the NVD API key in Setup &gt; General &gt; NVD Plugin, associate CPE names to your software, then run the "UpdateVulnTask" automatic action.')
+               . __s('No vulnerabilities have been downloaded yet. Set the NVD API key in Setup > General > NVD Plugin, associate CPE names to your software, then run the "UpdateVulnTask" automatic action.')
                . '</div></div></div>';
             return;
         }

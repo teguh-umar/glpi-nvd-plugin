@@ -5,6 +5,14 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-09-10
+
+### Fixed
+
+- The empty-state message on the NVD Vulnerabilities page showed a literal
+  `&gt;` instead of `>` (the string contained a pre-escaped entity that
+  `__s()` escaped a second time).
+
 ## [2.2.0] - 2026-09-10
 
 ### Changed
@@ -124,6 +132,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.2.1]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.2.0]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN
 [2.1.1]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN
 [2.1.0]: https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN

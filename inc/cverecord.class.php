@@ -64,12 +64,13 @@ class PluginNvdCverecord {
         foreach ($descriptions as $vuln_language => $description) {
 
             if (preg_match("/$vuln_language\_\w\w/i", $language)) {
-                
+
                 return $description;
             }
         }
 
-        return $descriptions['en'];
+        // Prefer English, then any available description, then nothing.
+        return $descriptions['en'] ?? (reset($descriptions) ?: '');
     }
 
     /**

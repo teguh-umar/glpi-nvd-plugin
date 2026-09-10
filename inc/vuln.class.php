@@ -504,6 +504,8 @@ class PluginNvdVuln extends CommonDBTM {
 .nvd-vuln-page .nvd-kpi-btn { cursor: pointer; transition: box-shadow .12s, transform .12s; }
 .nvd-vuln-page .nvd-kpi-btn:hover { box-shadow: 0 0 0 1px var(--bs-primary, #206bc4); }
 .nvd-vuln-page .nvd-kpi-btn.active { box-shadow: 0 0 0 2px var(--bs-primary, #206bc4); transform: translateY(-1px); }
+.nvd-vuln-page .nvd-kpi-value.text-yellow { color: #b8860b !important; }
+.nvd-vuln-page .nav-tabs .badge { color: #fff !important; background-color: var(--bs-primary, #206bc4) !important; }
 .nvd-vuln-page .vuln-table td, .nvd-vuln-page .vuln-table th { word-wrap: break-word; }
 .nvd-vuln-page th.nvd-sortable { cursor: pointer; user-select: none; }
 .nvd-vuln-page th.nvd-sortable::after { content: " \2195"; opacity: .35; }
@@ -983,9 +985,9 @@ CSS;
         $out  = '<nav>';
         $out .= '<div class="nav nav-tabs" id="nav-tab" role="tablist">';
         $out .= '<button class="nav-link active" id="nav-software_vuln-tab" data-bs-toggle="tab" data-bs-target="#nav-software_vuln" type="button" role="tab" aria-controls="nav-software_vuln" aria-selected="true">';
-        $out .= __s('Software Vulnerabilities') . ' <span class="badge bg-secondary ms-1">' . (int)$NsoftwareVulns . '</span></button>';
+        $out .= __s('Software Vulnerabilities') . ' <span class="badge bg-primary text-white ms-2">' . (int)$NsoftwareVulns . '</span></button>';
         $out .= '<button class="nav-link" id="nav-system_vuln-tab" data-bs-toggle="tab" data-bs-target="#nav-system_vuln" type="button" role="tab" aria-controls="nav-system_vuln" aria-selected="false">';
-        $out .= __s('OS Vulnerabilities') . ' <span class="badge bg-secondary ms-1">' . (int)$NsystemVulns . '</span></button>';
+        $out .= __s('OS Vulnerabilities') . ' <span class="badge bg-primary text-white ms-2">' . (int)$NsystemVulns . '</span></button>';
         $out .= '</div>';
         $out .= '</nav>';
         $out .= '<div class="tab-content" id="nav-tabContent">';

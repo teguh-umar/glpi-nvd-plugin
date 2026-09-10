@@ -153,6 +153,10 @@ function changeSelectedValue(select, value) {
  */
 function nvdVulnPageInit() {
 
+    var page = document.querySelector(".nvd-vuln-page");
+    if (!page || page.dataset.nvdInit === "1") { return; }
+    page.dataset.nvdInit = "1";
+
     document.querySelectorAll(".nvd-vuln-toolbar").forEach(function (toolbar) {
 
         var table = document.getElementById(toolbar.dataset.target);
@@ -250,3 +254,18 @@ function nvdVulnPageInit() {
         });
     });
 }
+
+// Self-initialise on the NVD Vulnerabilities page regardless of when this
+// script is evaluated (head, deferred, or after DOMContentLoaded).
+(function () {
+    function nvdBoot() {
+        if (document.querySelector(".nvd-vuln-page")) {
+            try { nvdVulnPageInit(); } catch (e) { /* ignore */ }
+        }
+    }
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", nvdBoot);
+    } else {
+        nvdBoot();
+    }
+})();

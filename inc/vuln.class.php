@@ -526,6 +526,8 @@ CSS;
 
         echo '</div>';
 
+        // js/nvd.js self-initialises on `.nvd-vuln-page`; this is only a fast
+        // path for when the script is already evaluated.
         echo Html::scriptBlock('if (window.nvdVulnPageInit) { nvdVulnPageInit(); }');
     }
 

@@ -5,6 +5,18 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.2] - 2026-09-10
+
+### Fixed
+
+- The NVD Vulnerabilities page's interactivity (clickable KPI tiles, search,
+  filter, column sort) could stay dead if `js/nvd.js` was evaluated after the
+  inline bootstrap ran. `js/nvd.js` now self-initialises on `.nvd-vuln-page`
+  (on `DOMContentLoaded`, or immediately if already parsed) and
+  `nvdVulnPageInit()` is idempotent, so it works regardless of script load
+  order. If it was already working, redeploy + reload PHP-FPM + hard-refresh
+  the browser to pick up the new files.
+
 ## [2.3.1] - 2026-09-10
 
 ### Fixed
@@ -150,6 +162,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.3.2]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.3.1]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.3.0]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.2.1]: https://github.com/teguh-umar/glpi-nvd-plugin

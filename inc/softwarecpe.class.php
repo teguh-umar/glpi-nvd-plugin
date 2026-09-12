@@ -147,7 +147,7 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
         self::printCurrentCPEAssociation($vendor_name, $product_name);
 
         if ($service_unavailable) {
-            echo '<div class="alert alert-warning m-2">' . __s('The CVE vendor/product directory (cve.circl.lu) could not be reached, so the vendor and product lists below are empty. Check the NVD plugin log (files/_log/nvd.log) and this instance\'s outbound proxy configuration, then try again.') . '</div>';
+            echo '<div class="alert alert-warning m-2">' . __s('The CVE vendor/product directory (cve.circl.lu) could not be reached, so the lists below are empty. Check the NVD plugin log (files/_log/nvd.log) and this instance\'s outbound proxy configuration - or type the vendor/product manually below.') . '</div>';
         }
 
         // Print separator
@@ -164,6 +164,14 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
 
         // Print form select dropdowns
         self::printVendorAndProductDropdowns($vendors, $vendor_name, $products, $product_name);
+
+        // Print separator
+        self::printHorizontalSeparator();
+
+        // Manual vendor/product entry - always available as a fallback for
+        // when cve.circl.lu can't be reached, or when the exact CPE name is
+        // already known.
+        self::printManualVendorProductOverride($vendor_name, $product_name);
 
         // Print form footer, submit button and js function
         self::printFormFooter();
@@ -317,6 +325,40 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
     }
 
     /**
+     * Display a manual vendor/product entry fallback, submitted alongside the
+     * dropdowns (as vendor_manual / product_manual). Kept independent of the
+     * CIRCL-backed dropdowns above so a software's CPE can still be assigned
+     * when cve.circl.lu is unreachable, or directly when the exact CPE name
+     * is already known.
+     *
+     * @since 2.4.4
+     *
+     * @param string|null $selected_vendor
+     * @param string|null $selected_product
+     *
+     * @return void
+     */
+    private static function printManualVendorProductOverride($selected_vendor, $selected_product) {
+
+        $out  = '<div class="nvd_cpe_div">';
+        $out .= '<div class="nvd_cpe_stack_collumn" style="width:100%;max-width:600px">';
+        $out .= '<div class="nvd_cpe_stack_row"><div><b class="nvd_cpe_title">' . __s('Or type the CPE vendor/product manually') . '</b></div></div>';
+        $out .= '<div class="nvd_cpe_stack_row"><div>'
+              . __s('Fills in even when the dropdowns above are empty. Look up the exact vendor and product tokens at')
+              . ' <a href="https://nvd.nist.gov/products/cpe/search" target="_blank" rel="noopener">nvd.nist.gov/products/cpe/search</a> - '
+              . __s('for example vendor "microsoft", product "windows_10".')
+              . '</div></div>';
+        $out .= '<div class="nvd_cpe_stack_row">';
+        $out .= '<div class="nvd_cpe_row"><label for="nvd_cpe_vendor_manual">' . __s('Vendor') . '</label><br>'
+              . '<input type="text" id="nvd_cpe_vendor_manual" name="vendor_manual" class="nvd_cpe_textinput" value="' . htmlescape($selected_vendor ?? '') . '"></div>';
+        $out .= '<div class="nvd_cpe_row"><label for="nvd_cpe_product_manual">' . __s('Product') . '</label><br>'
+              . '<input type="text" id="nvd_cpe_product_manual" name="product_manual" class="nvd_cpe_textinput" value="' . htmlescape($selected_product ?? '') . '"></div>';
+        $out .= '</div></div></div>';
+
+        echo $out;
+    }
+
+    /**
      * Display form selectors for vendor and product
      *
      * @since 1.0.0
@@ -346,7 +388,7 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
         $out .= '<div class="nvd_cpe_row">';
         $out .= '<div><b class="nvd_cpe_title">' . __('Available Vendors: ') . '</b></div></div>';
         $out .= '<div class="nvd_cpe_row">';
-        $out .= '<div><select name="vendor" id="nvd_cpe_vendor_dropdown" class="nvd_cpe_dropdown" required>';
+        $out .= '<div><select name="vendor" id="nvd_cpe_vendor_dropdown" class="nvd_cpe_dropdown">';
         $out .= '<option disabled ' . (($selected_vendor==NULL) ? 'selected ' : '') . ' value="-DEFAULT-">-- ' . __('SELECT A VENDOR') . ' --</option>';
         foreach ($vendors as $vendor) {
 
@@ -364,7 +406,7 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
         $out .= '<div class="nvd_cpe_row">';
         $out .= '<div><b class="nvd_cpe_title">' . __('Available Products:') . '</b></div></div>';
         $out .= '<div class="nvd_cpe_row">';
-        $out .= '<div><select name="product" id="nvd_cpe_product_dropdown" class="nvd_cpe_dropdown" required>';
+        $out .= '<div><select name="product" id="nvd_cpe_product_dropdown" class="nvd_cpe_dropdown">';
         $out .= '<option disabled ' . (($selected_product==NULL) ? 'selected ' : '') . ' value="-DEFAULT-">-- ' . __('SELECT A PRODUCT') . ' --</option>';
         foreach ($products as $product) {
 

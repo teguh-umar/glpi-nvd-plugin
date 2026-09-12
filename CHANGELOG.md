@@ -5,6 +5,25 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.4] - 2026-09-13
+
+### Added
+
+- **Manual CPE vendor/product entry.** Confirmed on this deployment:
+  `cve.circl.lu` (the vendor/product directory behind the CPE Association
+  tab's dropdowns) is not reachable at all from this network, which left the
+  dropdowns permanently empty with no way to assign a CPE through the UI.
+  A "Or type the CPE vendor/product manually" section is now always shown
+  alongside the dropdowns, with a link to NVD's own CPE dictionary search
+  (nvd.nist.gov/products/cpe/search). The manually typed value wins over the
+  dropdown selection when both are present, and is normalised to lowercase
+  with underscores (NIST CPE's convention).
+- The vendor/product `<select>` elements are no longer `required`, since an
+  unreachable directory previously left them with nothing selectable and
+  the form could not be submitted at all via the browser's own HTML5
+  validation. Vendor/product are still required server-side (from either
+  source) before a CPE association is saved.
+
 ## [2.4.3] - 2026-09-13
 
 ### Fixed
@@ -302,6 +321,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.4.4]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.3]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.2]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.1]: https://github.com/teguh-umar/glpi-nvd-plugin

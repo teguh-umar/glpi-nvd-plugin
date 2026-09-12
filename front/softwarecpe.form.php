@@ -28,9 +28,18 @@ if (isset($_GET['vendor'])) {
 } elseif (isset($_POST['softwares_id']) and isset($_POST['vendor']) and isset($_POST['product']) and isset($_POST['action'])) {
 
     $softwares_id = $_POST['softwares_id'];
-    $vendor = $_POST['vendor'];
-    $product = $_POST['product'];
+
+    // The manual vendor/product fields (printManualVendorProductOverride())
+    // take priority over the CIRCL-backed dropdowns - they're the only way
+    // to set a CPE at all when cve.circl.lu can't be reached.
+    $vendor  = normalizeCPEToken($_POST['vendor_manual'] ?? '', $_POST['vendor'] ?? '');
+    $product = normalizeCPEToken($_POST['product_manual'] ?? '', $_POST['product'] ?? '');
     $action = $_POST['action'];
+
+    if ($vendor === '' || $product === '') {
+        Session::addMessageAfterRedirect(__s('Vendor and product are required to set a CPE association.', 'nvd'), false, ERROR);
+        Html::redirect("{$CFG_GLPI['root_doc']}/front/software.form.php?id=$softwares_id");
+    }
 
     switch($action) {
         case 'insert':
@@ -45,6 +54,37 @@ if (isset($_GET['vendor'])) {
 
 } else {
     Html::redirect("{$CFG_GLPI['root_doc']}/front/software.php");
+}
+
+/**
+ * Resolve a CPE vendor/product value from the manual override field first
+ * (see PluginNvdSoftwarecpe::printManualVendorProductOverride()), falling
+ * back to the CIRCL-backed dropdown value, and normalise it to the
+ * lowercase-with-underscores form NIST CPE names use.
+ *
+ * @since 2.4.4
+ *
+ * @param string $manual    Value of the manual text input (vendor_manual / product_manual)
+ * @param string $dropdown  Value of the <select> (vendor / product); '-DEFAULT-' means "none selected"
+ *
+ * @return string  Normalised token, or '' if neither source provided one
+ */
+function normalizeCPEToken($manual, $dropdown) {
+
+    $value = trim((string) $manual);
+
+    if ($value === '') {
+        $value = trim((string) $dropdown);
+        if ($value === '-DEFAULT-') {
+            $value = '';
+        }
+    }
+
+    if ($value === '') {
+        return '';
+    }
+
+    return strtolower(str_replace([' ', '-'], '_', $value));
 }
 
 /**

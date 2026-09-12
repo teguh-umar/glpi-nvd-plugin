@@ -26,8 +26,14 @@ class PluginNvdVuln extends CommonDBTM {
      */
     function getTabNameForItem(CommonGLPI $item, $withtemplate=0) {
 
+        // A trashed asset is no longer live inventory - don't show a
+        // (potentially stale, soon-to-be-pruned) vulnerability count for it.
+        if (method_exists($item, 'isDeleted') && $item->isDeleted()) {
+            return self::createTabEntry(__('Vulnerabilities'), 0);
+        }
+
         $totalVulnerabilities = 0;
-        
+
         switch($item::getType()) {
 
             case Software::getType():
@@ -217,6 +223,15 @@ class PluginNvdVuln extends CommonDBTM {
      * @return boolean
      */
     static function displayTabContentForItem(CommonGLPI $item, $tabnum=1, $withtemplate=0) {
+
+        // A trashed asset is no longer live inventory - vulnerability tracking
+        // is suspended until it is restored (or the stale rows are purged).
+        if (method_exists($item, 'isDeleted') && $item->isDeleted()) {
+            echo '<div class="alert alert-secondary m-2">'
+               . __s('This item is in the trash. Vulnerability tracking is suspended until it is restored.')
+               . '</div>';
+            return true;
+        }
 
         switch($item::getType()) {
 
@@ -620,24 +635,35 @@ CSS;
                 $instance_IDs[strtolower($item_type)][] = $item_id;
             }
 
-            // Request device names from corresponding tables
+            // Request device names from corresponding tables - excluding
+            // soft-deleted (trashed) assets, which are no longer live inventory.
             foreach ($instance_IDs as $item_type => $IDs) {
 
                 $table = 'glpi_' . $item_type . 's';
 
-                /***********************************************************************************************
-                 * Request device names for the device IDs associated with a vulnerability
-                 *
-                 *  SELECT name
-                 *  FROM 'glpi_' . $item_type . 's'
-                 *  WHERE id IN $IDs
-                 **********************************************************************************************/
-                $res_2 = $DB->request(['SELECT' => new QueryExpression("GROUP_CONCAT(`name` ORDER BY `id`) AS names"),
-                                       'FROM' => $table,
-                                       'WHERE' => ['id' => $IDs]]);
+                $condition = ['id' => $IDs];
+                if ($DB->fieldExists($table, 'is_deleted')) {
+                    $condition['is_deleted'] = 0;
+                }
 
-                //Associate device types and names with their corresponding name
-                $instance_IDs[$item_type] = array_combine($instance_IDs[$item_type], explode(',', $res_2->current()['names']));
+                /***********************************************************************************************
+                 * Request name of each still-live device associated with a vulnerability
+                 *
+                 *  SELECT id, name
+                 *  FROM 'glpi_' . $item_type . 's'
+                 *  WHERE id IN $IDs AND is_deleted = 0
+                 **********************************************************************************************/
+                $res_2 = $DB->request(['SELECT' => ['id', 'name'],
+                                       'FROM' => $table,
+                                       'WHERE' => $condition]);
+
+                // Only the still-live devices survive here - a deleted asset's
+                // id simply won't appear in $names.
+                $names = [];
+                foreach ($res_2 as $device_row) {
+                    $names[$device_row['id']] = $device_row['name'];
+                }
+                $instance_IDs[$item_type] = $names;
             }
 
             $instances = [];
@@ -649,7 +675,10 @@ CSS;
                 }
             }
 
-            $vulnerabilities[$row['VULN_ID']] = implode(', ', $instances);
+            // Skip vulnerabilities whose every installation is on a deleted asset.
+            if ($instances) {
+                $vulnerabilities[$row['VULN_ID']] = implode(', ', $instances);
+            }
         }
 
         //Request information on the obtained CVE records
@@ -702,23 +731,37 @@ CSS;
 
             $installationData = PluginNvdCpe::getOSInstallationData($name, $version, $kernel, $kernelVersion, $servicePack);
 
-            if (!is_null($installationData)) {
+            if (is_null($installationData)) { continue; }
 
-                $configuration = $installationData['configuration'];
+            $configuration = $installationData['configuration'];
 
-                /***********************************************************************************************
-                 * Request device names for every device
-                 *
-                 *  SELECT name FROM <item table> WHERE id = $ID
-                 **********************************************************************************************/
-                $res_2 = $DB->request(['SELECT' => 'name',
-                                    'FROM' => $table,
-                                    'WHERE' => ['id' => $ID]]);
-
-                $deviceName = ($res_2->numrows() == 1) ? $res_2->current()['name'] : 'UNNAMED_DEVICE';
-
-                $deviceConfigurations[$configuration][] = '<a href="' . htmlescape($item_type::getFormURLWithID((int)$ID)) . '">' . htmlescape($deviceName) . '</a>';
+            // Register the configuration as seen even if the device turns out to
+            // be deleted below, so the caller can tell "resolved to a deleted
+            // asset" (skip the vulnerability) apart from "never resolved at all"
+            // (keep showing it, labelled with the raw config - see below).
+            if (!array_key_exists($configuration, $deviceConfigurations)) {
+                $deviceConfigurations[$configuration] = [];
             }
+
+            $condition = ['id' => $ID];
+            if ($DB->fieldExists($table, 'is_deleted')) {
+                $condition['is_deleted'] = 0;
+            }
+
+            /***********************************************************************************************
+             * Request the device's name, if it is still a live (non-deleted) asset
+             *
+             *  SELECT name FROM <item table> WHERE id = $ID AND is_deleted = 0
+             **********************************************************************************************/
+            $res_2 = $DB->request(['SELECT' => 'name',
+                                'FROM' => $table,
+                                'WHERE' => $condition]);
+
+            if ($res_2->numrows() != 1) { continue; } // deleted, or no longer exists
+
+            $deviceName = $res_2->current()['name'];
+
+            $deviceConfigurations[$configuration][] = '<a href="' . htmlescape($item_type::getFormURLWithID((int)$ID)) . '">' . htmlescape($deviceName) . '</a>';
         }
 
         /***********************************************************************************************
@@ -739,20 +782,28 @@ CSS;
             $configurations = explode(',', $row['configurations']);
 
             $devices = [];
+            $anyConfigurationResolved = false;
 
             foreach ($configurations as $configuration) {
 
-                $devices = array_merge($devices, $deviceConfigurations[$configuration] ?? []);
+                if (array_key_exists($configuration, $deviceConfigurations)) {
+                    $anyConfigurationResolved = true;
+                    $devices = array_merge($devices, $deviceConfigurations[$configuration]);
+                }
             }
 
             if ($devices) {
+                // At least one live (non-deleted) device carries this configuration.
                 $vulnerabilities[$row['VULN_ID']] = implode(', ', array_unique($devices));
-            } else {
-                // The affected OS version is no longer resolvable to a live
-                // installation - still show the row, labelled with the config.
+            } elseif (!$anyConfigurationResolved) {
+                // The configuration string itself never matched any current
+                // installation (a resolution gap, not a deletion) - still show
+                // the row, labelled with the raw config, so it isn't silently lost.
                 $vulnerabilities[$row['VULN_ID']] = '<span class="text-muted">'
                     . htmlescape(implode(', ', array_unique($configurations))) . '</span>';
             }
+            // else: the configuration matched, but every device carrying it has
+            // been deleted - skip this vulnerability entirely.
         }
 
         //Request information on the obtained CVE records

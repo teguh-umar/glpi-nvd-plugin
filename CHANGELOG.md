@@ -5,6 +5,34 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.2] - 2026-09-12
+
+### Changed
+
+- **Soft-deleted (trashed) assets are no longer treated as live inventory.**
+  A GLPI "delete" is a trash move (`is_deleted = 1`), not an immediate purge,
+  so a deleted Computer/Phone's installation rows stayed visible to nvd
+  indefinitely. Now:
+  - The cron (`requestAllSoftwareInstallations()` /
+    `requestAllOSInstallations()`) excludes installations that belong only
+    to a deleted asset when deciding what's currently installed, so
+    vulnerabilities that no longer affect any live asset get pruned on the
+    next run.
+  - The Central tab / Tools page / other-devices lists
+    (`gatherSoftwareVulnList()` / `gatherSystemVulnList()`) exclude deleted
+    assets from the "affected devices" column, and drop a vulnerability
+    entirely from the list if every device carrying it is deleted. A
+    vulnerability whose configuration never resolved to *any* installation
+    (a genuine matching gap, unrelated to deletion) still shows, labelled
+    with the raw configuration.
+  - Opening a deleted item's own **Vulnerabilities** tab now shows a notice
+    ("in the trash, tracking suspended") and a 0 count instead of
+    potentially-stale data - this was the exact scenario in the bug report
+    (a deleted Computer still listing OS vulnerabilities).
+- `getNextId()`'s replacement pattern (2.4.1) was reused here too:
+  `PluginNvdDatabaseutils::getDeletedItemIDs($itemtype)` reads `is_deleted`
+  straight off the resolved GLPI table, guarded by `$DB->fieldExists()`.
+
 ## [2.4.1] - 2026-09-12
 
 ### Fixed
@@ -251,6 +279,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.4.2]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.1]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.0]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.3.4]: https://github.com/teguh-umar/glpi-nvd-plugin

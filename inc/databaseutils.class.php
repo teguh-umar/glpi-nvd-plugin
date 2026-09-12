@@ -3,6 +3,38 @@
 class PluginNvdDatabaseutils {
 
     /**
+     * IDs of the given itemtype's items currently in the GLPI trash
+     * (is_deleted = 1). Used to exclude soft-deleted assets from vulnerability
+     * matching, counts and display - a deleted asset is not part of the live
+     * inventory any more even though its installation rows are kept until it
+     * is purged.
+     *
+     * @since 2.5.0
+     *
+     * @param string $itemtype
+     *
+     * @return int[]
+     */
+    public static function getDeletedItemIDs($itemtype) {
+
+        global $DB;
+
+        if (!is_string($itemtype) || !class_exists($itemtype) || !is_subclass_of($itemtype, CommonDBTM::class)) {
+            return [];
+        }
+
+        $table = $itemtype::getTable();
+
+        if (!$DB->fieldExists($table, 'is_deleted')) {
+            return [];
+        }
+
+        $res = $DB->request(['SELECT' => 'id', 'FROM' => $table, 'WHERE' => ['is_deleted' => 1]]);
+
+        return array_map('intval', self::pushResToArray($res, 'id'));
+    }
+
+    /**
      * Queries the GLPI database and returns the default language from settings
      * 
      * @since 1.0.0

@@ -404,17 +404,33 @@ class PluginNvdUpdatevuln extends CommonGLPI {
 
         global $DB;
 
+        // Soft-deleted (trashed) assets are not live inventory any more, even
+        // though their glpi_items_softwareversions rows are kept until purge.
+        $deletedIDs = [
+            'Computer' => PluginNvdDatabaseutils::getDeletedItemIDs('Computer'),
+            'Phone'    => PluginNvdDatabaseutils::getDeletedItemIDs('Phone'),
+        ];
+
         /***********************************************************************************************
          * Request all software installations on the devices managed by GLPI
-         * 
-         *  SELECT DISTINCT softwareversions_id
-         *  FROM glpi_items_softwareversions 
+         *
+         *  SELECT DISTINCT softwareversions_id, itemtype, items_id
+         *  FROM glpi_items_softwareversions
          **********************************************************************************************/
-        $res = $DB->request(['SELECT' => 'softwareversions_id',
+        $res = $DB->request(['SELECT' => ['softwareversions_id', 'itemtype', 'items_id'],
                              'DISTINCT' => true,
                              'FROM' => 'glpi_items_softwareversions']);
 
-        return PluginNvdDatabaseutils::pushResToArray($res, 'softwareversions_id');
+        $installed = [];
+
+        foreach ($res as $row) {
+
+            if (in_array($row['items_id'], $deletedIDs[$row['itemtype']] ?? [], true)) { continue; }
+
+            $installed[$row['softwareversions_id']] = true;
+        }
+
+        return array_keys($installed);
     }
 
     /**
@@ -437,29 +453,37 @@ class PluginNvdUpdatevuln extends CommonGLPI {
 
         global $DB;
 
+        // Soft-deleted (trashed) assets are not live inventory any more, even
+        // though their glpi_items_operatingsystems rows are kept until purge.
+        $deletedIDs = [
+            'Computer' => PluginNvdDatabaseutils::getDeletedItemIDs('Computer'),
+            'Phone'    => PluginNvdDatabaseutils::getDeletedItemIDs('Phone'),
+        ];
+
         /***********************************************************************************************
          * Request all operating system installations on the devices managed by GLPI
-         * 
-         *  SELECT operatingsystems_id, operatingsystemversions_id, operatingsystemkernelversions_id,
-         *      operatingsystemservicepacks_id
+         *
+         *  SELECT itemtype, items_id, operatingsystems_id, operatingsystemversions_id,
+         *      operatingsystemkernelversions_id, operatingsystemservicepacks_id
          *  FROM glpi_items_operatingsystems
-         *  GROUP BY operatingsystems_id, operatingsystemversions_id, operatingsystemkernelversions_id, 
-         *      operatingsystemservicepacks_id 
          **********************************************************************************************/
-        $res = $DB->request(['SELECT' => ['operatingsystems_id', 'operatingsystemversions_id', 'operatingsystemkernelversions_id', 'operatingsystemservicepacks_id'],
-                             'FROM' => 'glpi_items_operatingsystems',
-                             'GROUPBY' => ['operatingsystems_id', 'operatingsystemversions_id', 'operatingsystemkernelversions_id', 'operatingsystemservicepacks_id']]);
+        $res = $DB->request(['SELECT' => ['itemtype', 'items_id', 'operatingsystems_id', 'operatingsystemversions_id', 'operatingsystemkernelversions_id', 'operatingsystemservicepacks_id'],
+                             'FROM' => 'glpi_items_operatingsystems']);
 
         $OSInstalations = [];
-        
+        $seenConfigurations = [];
+
         foreach ($res as $id => $row) {
-            
+
+            if (in_array($row['items_id'], $deletedIDs[$row['itemtype']] ?? [], true)) { continue; }
+
             [$name, $version, $kernel, $kernelVersion, $servicePack] = PluginNvdDatabaseutils::requestOSdata($row);
 
             $installationData = PluginNvdCpe::getOSInstallationData($name, $version, $kernel, $kernelVersion, $servicePack);
 
-            if (!is_null($installationData)) {
+            if (!is_null($installationData) && !isset($seenConfigurations[$installationData['configuration']])) {
 
+                $seenConfigurations[$installationData['configuration']] = true;
                 $OSInstalations[] = $installationData;
             }
         }

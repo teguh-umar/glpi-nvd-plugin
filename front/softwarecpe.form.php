@@ -15,10 +15,13 @@ Session::checkRight('software', UPDATE);
 if (isset($_GET['vendor'])) {
 
     $vendor = $_GET['vendor'];
-    
+
     $output = getProductsForVendor($vendor);
 
-    $products = $output['product'];
+    // getProductsForVendor() / launchRequest() return null when the CIRCL
+    // vendor/product directory (cve.circl.lu) could not be reached - respond
+    // with an empty list rather than a fatal error the caller's JS can't parse.
+    $products = is_array($output['product'] ?? null) ? $output['product'] : [];
 
     echo json_encode($products);
 

@@ -5,6 +5,29 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.3] - 2026-09-13
+
+### Fixed
+
+- **Fatal error opening the CPE Association tab on a Software item** when the
+  CIRCL vendor/product directory (`cve.circl.lu` - a separate service from
+  the NVD API, used only to populate the vendor/product dropdowns) could not
+  be reached: `PluginNvdConnection::launchRequest()` returns `null` on any
+  connection failure, and the code indexed straight into it
+  (`$output['vendor']`) with no check, causing a PHP warning followed by a
+  fatal `implode(): ... must be of type array, string given`.
+  - `PluginNvdSoftwarecpe::displayForSoftware()` and the
+    `front/softwarecpe.form.php` AJAX endpoint now treat a failed lookup as
+    an empty vendor/product list instead of crashing.
+  - The CPE tab shows a warning banner when the directory is unreachable,
+    pointing at `files/_log/nvd.log` and the instance's outbound proxy
+    configuration.
+  - `printVendorAndProductDropdowns()` defensively casts its inputs to
+    arrays as a second line of defence.
+- This does not affect CVE matching itself (the NVD API call used by
+  `UpdateVulnTask`) - only the vendor/product picker used when manually
+  assigning a CPE to a software.
+
 ## [2.4.2] - 2026-09-12
 
 ### Changed
@@ -279,6 +302,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.4.3]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.2]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.1]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.0]: https://github.com/teguh-umar/glpi-nvd-plugin

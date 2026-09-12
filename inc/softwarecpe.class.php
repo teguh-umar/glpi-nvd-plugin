@@ -65,7 +65,13 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
         $CVEConn = new PluginNvdCveconnection();
         $output = $CVEConn->launchRequest();
 
-        $vendors = $output['vendor'];
+        // launchRequest() returns null on any connection/API failure (see
+        // PluginNvdConnection::launchRequest) - the CIRCL vendor/product
+        // directory (cve.circl.lu) is a separate service from the NVD API and
+        // can be unreachable even when NVD itself works. Degrade to an empty
+        // list + a notice instead of a fatal error.
+        $service_unavailable = !is_array($output);
+        $vendors = is_array($output['vendor'] ?? null) ? $output['vendor'] : [];
         $products = [];
 
         $action = 'insert';
@@ -97,7 +103,8 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
             $CVEConn = new PluginNvdCveconnection($vendor_name);
             $output = $CVEConn->launchRequest();
 
-            $products = $output['product'];
+            $service_unavailable = $service_unavailable || !is_array($output);
+            $products = is_array($output['product'] ?? null) ? $output['product'] : [];
         } 
 
         /***********************************************************************************************
@@ -138,6 +145,10 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
 
         // Print current CPE associations for given software
         self::printCurrentCPEAssociation($vendor_name, $product_name);
+
+        if ($service_unavailable) {
+            echo '<div class="alert alert-warning m-2">' . __s('The CVE vendor/product directory (cve.circl.lu) could not be reached, so the vendor and product lists below are empty. Check the NVD plugin log (files/_log/nvd.log) and this instance\'s outbound proxy configuration, then try again.') . '</div>';
+        }
 
         // Print separator
         self::printHorizontalSeparator();
@@ -318,6 +329,11 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
      * @return void
      */
     private static function printVendorAndProductDropdowns($vendors, $selected_vendor, $products, $selected_product) {
+
+        // Defensive: callers should already pass arrays, but never let a bad
+        // API response (see displayForSoftware()) turn into a fatal error here.
+        $vendors  = is_array($vendors) ? $vendors : [];
+        $products = is_array($products) ? $products : [];
 
         $out =  '<div class="nvd_cpe_div">';
 

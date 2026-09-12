@@ -79,6 +79,10 @@
     </authors>
     <versions>
         <version>
+            <num>2.4.5</num>
+            <compatibility>~11.0</compatibility>
+        </version>
+        <version>
             <num>2.4.4</num>
             <compatibility>~11.0</compatibility>
         </version>

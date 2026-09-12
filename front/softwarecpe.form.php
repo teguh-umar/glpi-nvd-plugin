@@ -84,6 +84,23 @@ function normalizeCPEToken($manual, $dropdown) {
         return '';
     }
 
+    // The dropdown may come from GLPI's own Manufacturers list (used as a
+    // fallback vendor source when cve.circl.lu is unreachable - see
+    // PluginNvdSoftwarecpe::displayForSoftware()), which carries legal-entity
+    // suffixes NIST CPE vendor names don't ("Microsoft Corporation" -> the
+    // real CPE vendor is "microsoft"). Best-effort strip trailing suffix
+    // words one at a time ("Wacom Technology Corp." -> "Wacom Technology" ->
+    // "Wacom"); still just a heuristic - the manual field lets the user
+    // correct it either way.
+    $suffix_pattern = '/[\s,]+(corporation|corp\.?|incorporated|inc\.?|limited|ltd\.?|llc|l\.l\.c\.?|co\.?|company|systems|technologies|technology|group|gmbh|s\.a\.?|plc|team)\.?$/i';
+    for ($i = 0; $i < 3; $i++) {
+        $stripped = preg_replace($suffix_pattern, '', $value);
+        if ($stripped === $value) { break; }
+        $value = trim($stripped);
+    }
+
+    $value = rtrim($value, " ,.");
+
     return strtolower(str_replace([' ', '-'], '_', $value));
 }
 

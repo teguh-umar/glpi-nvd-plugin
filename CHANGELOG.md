@@ -5,6 +5,25 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.5] - 2026-09-13
+
+### Added
+
+- **The CPE Association tab's vendor dropdown now falls back to GLPI's own
+  Manufacturers list** (Setup > Dropdowns > Manufacturers) when
+  `cve.circl.lu` is unreachable, instead of an empty dropdown. This is
+  local, always-available data - no external dependency.
+- Vendor values (whether picked from that fallback dropdown or typed into
+  the manual field) are cleaned up before being saved: trailing corporate
+  suffixes (`Corporation`, `Corp.`, `Inc.`, `Ltd.`, `LLC`, `Systems`,
+  `Technology`, `Team`, etc., stripped up to 3 times, plus stray trailing
+  commas/periods) are removed to get closer to the real NIST CPE vendor
+  token - e.g. GLPI's "Wacom Technology Corp." -> `wacom`, "Microsoft
+  Corporation" -> `microsoft`. This is a heuristic, not a lookup, so it
+  won't always be exact (e.g. "Oracle America" -> `oracle_america`, not
+  `oracle`) - the manual field is there to correct it by hand when needed.
+- New `PluginNvdDatabaseutils::getManufacturerNames()`.
+
 ## [2.4.4] - 2026-09-13
 
 ### Added
@@ -321,6 +340,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.4.5]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.4]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.3]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.2]: https://github.com/teguh-umar/glpi-nvd-plugin

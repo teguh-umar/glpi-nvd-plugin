@@ -35,6 +35,27 @@ class PluginNvdDatabaseutils {
     }
 
     /**
+     * Every manufacturer name known to this GLPI instance (Setup > Dropdowns >
+     * Manufacturers). Used as a local, always-available fallback source for the
+     * CPE Association tab's vendor list when the external CIRCL directory
+     * (cve.circl.lu) cannot be reached.
+     *
+     * @since 2.4.5
+     *
+     * @return string[]
+     */
+    public static function getManufacturerNames() {
+
+        global $DB;
+
+        $res = $DB->request(['SELECT' => 'name',
+                             'FROM' => 'glpi_manufacturers',
+                             'ORDER' => 'name']);
+
+        return array_values(array_filter(self::pushResToArray($res, 'name')));
+    }
+
+    /**
      * Queries the GLPI database and returns the default language from settings
      * 
      * @since 1.0.0

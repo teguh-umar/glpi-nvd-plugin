@@ -68,10 +68,15 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
         // launchRequest() returns null on any connection/API failure (see
         // PluginNvdConnection::launchRequest) - the CIRCL vendor/product
         // directory (cve.circl.lu) is a separate service from the NVD API and
-        // can be unreachable even when NVD itself works. Degrade to an empty
-        // list + a notice instead of a fatal error.
+        // can be unreachable even when NVD itself works. Degrade to a notice
+        // instead of a fatal error, and fall back to GLPI's own manufacturer
+        // list (Setup > Dropdowns > Manufacturers) - a local, always-available
+        // source - rather than leaving the vendor list empty.
         $service_unavailable = !is_array($output);
         $vendors = is_array($output['vendor'] ?? null) ? $output['vendor'] : [];
+        if ($service_unavailable) {
+            $vendors = PluginNvdDatabaseutils::getManufacturerNames();
+        }
         $products = [];
 
         $action = 'insert';
@@ -147,7 +152,7 @@ class PluginNvdSoftwarecpe extends CommonDBTM {
         self::printCurrentCPEAssociation($vendor_name, $product_name);
 
         if ($service_unavailable) {
-            echo '<div class="alert alert-warning m-2">' . __s('The CVE vendor/product directory (cve.circl.lu) could not be reached, so the lists below are empty. Check the NVD plugin log (files/_log/nvd.log) and this instance\'s outbound proxy configuration - or type the vendor/product manually below.') . '</div>';
+            echo '<div class="alert alert-warning m-2">' . __s('The CVE vendor/product directory (cve.circl.lu) could not be reached. The vendor list below is your GLPI Manufacturers instead (Setup > Dropdowns > Manufacturers) - it may need cleanup to match the exact NIST CPE vendor name (e.g. "Microsoft Corporation" vs "microsoft"). The product list is empty; type the product manually below.') . '</div>';
         }
 
         // Print separator

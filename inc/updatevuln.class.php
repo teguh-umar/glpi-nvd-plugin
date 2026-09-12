@@ -37,20 +37,17 @@ class PluginNvdUpdatevuln extends CommonGLPI {
         // If no API Key is set the task can't proceed
         if (is_null($apiKey)) { return false; }
 
-        // Get next vulnerability ID from database
-        $nextVulnID = PluginNvdDatabaseutils::getNextId('glpi_plugin_nvd_vulnerabilities');
-
         // Get every present vulnerability CVE ID
         $CVEs = self::getKnownCVEs();
 
         // Update vulnerabilities related to software applications
-        self::updateSoftwareVulnerabilities($apiKey, $nextVulnID, $CVEs);
+        self::updateSoftwareVulnerabilities($apiKey, $CVEs);
 
         // CVE IDs associated with some software versions
         $installedSoftwareVulnerabilities = self::requestAllVulnerableVersions('glpi_plugin_nvd_vulnerable_software_versions', 'vuln_id');
 
         // Update vulnerabilities related to operating systems
-        self::updateSystemVulnerabilities($apiKey, $nextVulnID, $CVEs);
+        self::updateSystemVulnerabilities($apiKey, $CVEs);
 
         // CVE IDs associated with some operating system versions
         $installedSystemVulnerabilities = self::requestAllVulnerableVersions('glpi_plugin_nvd_vulnerable_system_versions', 'vuln_id');
@@ -70,12 +67,11 @@ class PluginNvdUpdatevuln extends CommonGLPI {
      * @since 1.0.0
      * 
      * @param string    $apiKey         Key for NVD API
-     * @param int       $nextVulnID     Numeric id for the next inserted vulnerability
      * @param array     $CVEs           List of known vulnerabilities and their IDs on the database
-     * 
+     *
      * @return void
      */
-    private static function updateSoftwareVulnerabilities($apiKey, &$nextVulnID, &$CVEs) {
+    private static function updateSoftwareVulnerabilities($apiKey, &$CVEs) {
 
         $vuln_versions_table = 'glpi_plugin_nvd_vulnerable_software_versions';
         $vuln_version_column = 'softwareversions_id';
@@ -130,7 +126,7 @@ class PluginNvdUpdatevuln extends CommonGLPI {
                 $missingVulnerabilities = array_diff($NVD_CVEs, array_keys($CVEs));
 
                 // Create records in GLPI database for new vulnerabilities and update known CVEs
-                self::insertNewVulnerabilities($missingVulnerabilities, $CVE_Records, $nextVulnID, $CVEs);
+                self::insertNewVulnerabilities($missingVulnerabilities, $CVE_Records, $CVEs);
 
                 // Missing references to known vulnerabilities for software version
                 $missingVersionVulnerabilities = array_diff($NVD_CVEs, $version_CVEs);
@@ -147,12 +143,11 @@ class PluginNvdUpdatevuln extends CommonGLPI {
      * @since 1.0.0
      * 
      * @param string    $apiKey         Key for NVD API
-     * @param int       $nextVulnID     Numeric id for the next inserted vulnerability
      * @param array     $CVEs           List of known vulnerabilities and their IDs on the database
-     * 
+     *
      * @return void
      */
-    private static function updateSystemVulnerabilities($apiKey, &$nextVulnID, &$CVEs) {
+    private static function updateSystemVulnerabilities($apiKey, &$CVEs) {
 
         $vuln_versions_table = 'glpi_plugin_nvd_vulnerable_system_versions';
         $vuln_version_column = 'system_configuration';
@@ -200,7 +195,7 @@ class PluginNvdUpdatevuln extends CommonGLPI {
             $missingVulnerabilities = array_diff($NVD_CVEs, array_keys($CVEs));
 
             // Create records in GLPI database for new vulnerabilities and update known CVEs
-            self::insertNewVulnerabilities($missingVulnerabilities, $CVE_Records, $nextVulnID, $CVEs);
+            self::insertNewVulnerabilities($missingVulnerabilities, $CVE_Records, $CVEs);
 
             // Missing references to known vulnerabilities for software version
             $missingVersionVulnerabilities = array_diff($NVD_CVEs, $version_CVEs);
@@ -651,12 +646,11 @@ class PluginNvdUpdatevuln extends CommonGLPI {
      * 
      * @param array     $missingVulnerabilities     List of CVE IDs of vulnerabilities to insert
      * @param array     $CVE_Records                List of CVE records
-     * @param int       $nextVulnID                 Numeric id for the next inserted vulnerability
      * @param array     $knownCVEs                  List of known vulnerabilities and their IDs on the database
-     * 
+     *
      * @return void
      */
-    private static function insertNewVulnerabilities($missingVulnerabilities, $CVE_Records, &$nextVulnID, &$knownCVEs) {
+    private static function insertNewVulnerabilities($missingVulnerabilities, $CVE_Records, &$knownCVEs) {
 
         global $DB;
 
@@ -681,12 +675,12 @@ class PluginNvdUpdatevuln extends CommonGLPI {
 
             /***********************************************************************************************
              * Insert new vulnerability into GLPI database
-             * 
+             *
              *  INSERT INTO glpi_plugin_nvd_vulnerabilities
              *  (cve_id, base_score, exploitability_score, impact_score)
              *  VALUES ($CVE_ID, $base_score, $exploitability_score, $impact_score)
              **********************************************************************************************/
-            $DB->insert(
+            $inserted = $DB->insert(
                 'glpi_plugin_nvd_vulnerabilities', [
                     'cve_id' => $CVE_ID,
                     'base_score' => $base_score,
@@ -695,16 +689,22 @@ class PluginNvdUpdatevuln extends CommonGLPI {
                 ]
             );
 
+            if (!$inserted) { continue; }
+
+            // The real auto-assigned id - NOT a manually tracked counter. Using
+            // anything else (e.g. a separately computed "next id") can drift
+            // from the actual row id and make descriptions/configurations attach
+            // to the wrong vuln_id, or to no vuln_id at all.
+            $vuln_id = $DB->insertId();
+
             // Insert conrresponding descriptions
-            self::insertVulnerabilityDescriptions($nextVulnID, $descriptions);
+            self::insertVulnerabilityDescriptions($vuln_id, $descriptions);
 
             // Insert corresponding configurations
-            self::insertVulnerabilityConfigurations($nextVulnID, $configurations);
+            self::insertVulnerabilityConfigurations($vuln_id, $configurations);
 
             // Update known CVEs
-            $knownCVEs[$CVE_ID] = $nextVulnID;
-
-            $nextVulnID++;
+            $knownCVEs[$CVE_ID] = $vuln_id;
         }
     }
 

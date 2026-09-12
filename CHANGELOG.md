@@ -5,6 +5,49 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1] - 2026-09-12
+
+### Fixed
+
+- **Data-integrity bug: new CVEs' descriptions/configurations/version-links
+  could be stored under the wrong `vuln_id`, or none at all** — visible as
+  CVE rows with a correct CVE-ID / score / severity but an empty
+  **Description** column.
+  - Root cause: `PluginNvdUpdatevuln` tracked "the next vulnerability id" by
+    calling `PluginNvdDatabaseutils::getNextId()`, which read
+    `INFORMATION_SCHEMA.TABLES.AUTO_INCREMENT` with a **hardcoded
+    `TABLE_SCHEMA = 'glpi'`**. On any instance whose database is not
+    literally named `glpi` (e.g. `itsm`), the query matches no rows and
+    `getNextId()` returns `null`; the manually tracked counter then starts
+    fresh (`null++` → `1`) on every cron run instead of following the
+    table's real auto-increment, so it drifts from the id MySQL actually
+    assigned to the new `glpi_plugin_nvd_vulnerabilities` row. Descriptions,
+    configurations and the software/OS version links were all inserted
+    under that drifted id.
+  - Fix: removed the manual counter and `getNextId()` entirely.
+    `insertNewVulnerabilities()` now reads the real id straight off the
+    insert with `DBmysql::insertId()`. Also skips the description/
+    configuration/link inserts if the vulnerability insert itself failed
+    (it previously proceeded regardless).
+
+### Upgrade note
+
+This does not repair vulnerabilities already stored by a prior version.
+After deploying 2.4.1, clear the plugin's downloaded data and let the next
+`UpdateVulnTask` run repopulate it correctly:
+
+```sql
+TRUNCATE glpi_plugin_nvd_vulnerabilities;
+TRUNCATE glpi_plugin_nvd_vulnerability_descriptions;
+TRUNCATE glpi_plugin_nvd_vulnerability_configurations;
+TRUNCATE glpi_plugin_nvd_vulnerable_software_versions;
+TRUNCATE glpi_plugin_nvd_vulnerable_system_versions;
+```
+
+(`glpi_plugin_nvd_config` — the API key — and
+`glpi_plugin_nvd_cpe_software_associations` — your manual CPE mappings — are
+untouched by this bug and should **not** be truncated.)
+
 ## [2.4.0] - 2026-09-10
 
 ### Changed
@@ -208,6 +251,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.4.1]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.0]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.3.4]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.3.3]: https://github.com/teguh-umar/glpi-nvd-plugin

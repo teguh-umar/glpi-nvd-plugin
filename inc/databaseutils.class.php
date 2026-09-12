@@ -95,40 +95,16 @@ class PluginNvdDatabaseutils {
         return NULL;
     }
 
-    /**
-     * Queries the GLPI database and returns the current autoincrement value for the given table 
-     * 
-     * @since 1.0.0
-     * 
-     * @param string $table     Name of the table for which to query the autoincrement value 
-     * 
-     * @return int
+    /*
+     * getNextId() was removed in 2.4.1: it hardcoded TABLE_SCHEMA = 'glpi' to
+     * read INFORMATION_SCHEMA.TABLES.AUTO_INCREMENT, which returns nothing (and
+     * is stale even when it matches) on any instance whose database isn't
+     * literally named "glpi" - the resulting null/wrong value made
+     * PluginNvdUpdatevuln attach new CVE descriptions/configurations/version
+     * links to the wrong vuln_id (or none). Callers now use
+     * DBmysql::insertId() right after the insert instead of tracking a
+     * separate counter.
      */
-    public static function getNextId($table) {
-
-        global $DB;
-
-        /***********************************************************************************************
-         * Request autoincrement value for $table
-         * 
-         *  SELECT AUTO_INCREMENT
-         *  FROM INFORMATION_SCHEMA.TABLES
-         *  WHERE TABLE_SCHEMA = glpi AND TABLE_NAME = $table
-         **********************************************************************************************/
-        $res = $DB->request(['SELECT' => 'AUTO_INCREMENT',
-                             'FROM' => 'INFORMATION_SCHEMA.TABLES',
-                             'WHERE' => ['TABLE_SCHEMA' => 'glpi',
-                                         'TABLE_NAME' => $table]]);
-
-        if ($res->numrows() == 1) {
-
-            $row = $res->current();
-            
-            return $row['AUTO_INCREMENT'];
-        }
-        
-        return null;
-    }
 
     /**
      * Transform OS related info IDs to actual values

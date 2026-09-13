@@ -15,7 +15,49 @@ function pluginNvdInstall(){
 
     pluginNvdCreateTables();
 
+    // Idempotent - also brings an existing (pre-2.4.7) install's tables up to
+    // the same DEFAULT 0 the fresh-install DDL above now uses, without a
+    // separate upgrade script. Safe to run on every install()/--force call.
+    pluginNvdApplyKeyColumnDefaults();
+
     pluginNvdRegisterTasks();
+}
+
+/**
+ * Ensures every glpi_plugin_nvd_* foreign key column (*_id) is
+ * INT UNSIGNED NOT NULL DEFAULT 0, matching the suite-wide key convention.
+ * All of them were already INT UNSIGNED NOT NULL from 1.0.0 onward (no
+ * signed-key issue) - this only adds the DEFAULT 0 that was missing.
+ * MODIFY COLUMN is idempotent: running this against a table that's already
+ * correct is a harmless no-op, so it's safe on every plugin install/upgrade.
+ *
+ * @since 2.4.7
+ *
+ * @return void
+ */
+function pluginNvdApplyKeyColumnDefaults() {
+
+    global $DB;
+
+    $columns = [
+        'glpi_plugin_nvd_vulnerability_descriptions'    => ['vuln_id'],
+        'glpi_plugin_nvd_vulnerability_configurations'  => ['vuln_id'],
+        'glpi_plugin_nvd_vulnerable_software_versions'  => ['vuln_id', 'softwareversions_id'],
+        'glpi_plugin_nvd_vulnerable_system_versions'    => ['vuln_id'],
+        'glpi_plugin_nvd_cpe_software_associations'     => ['softwares_id'],
+    ];
+
+    foreach ($columns as $table => $fields) {
+
+        if (!$DB->tableExists($table)) { continue; }
+
+        foreach ($fields as $field) {
+
+            if (!$DB->fieldExists($table, $field)) { continue; }
+
+            $DB->doQuery("ALTER TABLE `$table` MODIFY `$field` INT UNSIGNED NOT NULL DEFAULT 0");
+        }
+    }
 }
 
 /**
@@ -75,7 +117,7 @@ function pluginNvdCreateTables(){
 
         $query = "CREATE TABLE `glpi_plugin_nvd_vulnerability_descriptions` (
                     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    `vuln_id` INT UNSIGNED NOT NULL,
+                    `vuln_id` INT UNSIGNED NOT NULL DEFAULT 0,
                     `language` CHAR(2),
                     `description` VARCHAR(8000),
                     CONSTRAINT `VULN_LANG` UNIQUE (`vuln_id`, `language`),
@@ -102,7 +144,7 @@ function pluginNvdCreateTables(){
 
         $query = "CREATE TABLE `glpi_plugin_nvd_vulnerability_configurations` (
                     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    `vuln_id` INT UNSIGNED NOT NULL,
+                    `vuln_id` INT UNSIGNED NOT NULL DEFAULT 0,
                     `vendor_name` VARCHAR(255),
                     `product_name` VARCHAR(255),
                     `update` VARCHAR(2047),
@@ -128,8 +170,8 @@ function pluginNvdCreateTables(){
 
         $query = "CREATE TABLE `glpi_plugin_nvd_vulnerable_software_versions` (
                     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    `vuln_id` INT UNSIGNED NOT NULL,
-                    `softwareversions_id` INT UNSIGNED NOT NULL,
+                    `vuln_id` INT UNSIGNED NOT NULL DEFAULT 0,
+                    `softwareversions_id` INT UNSIGNED NOT NULL DEFAULT 0,
                     CONSTRAINT `VULN_VERSION` UNIQUE (`vuln_id`, `softwareversions_id`),
                     PRIMARY KEY (`id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
@@ -150,7 +192,7 @@ function pluginNvdCreateTables(){
 
         $query = "CREATE TABLE `glpi_plugin_nvd_vulnerable_system_versions` (
                     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    `vuln_id` INT UNSIGNED NOT NULL,
+                    `vuln_id` INT UNSIGNED NOT NULL DEFAULT 0,
                     `system_configuration` VARCHAR(255) NOT NULL,
                     CONSTRAINT `VULN_SYSTEM_VERSION` UNIQUE (`vuln_id`, `system_configuration`),
                     PRIMARY KEY (`id`)
@@ -172,7 +214,7 @@ function pluginNvdCreateTables(){
 
         $query = "CREATE TABLE `glpi_plugin_nvd_cpe_software_associations` (
                     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    `softwares_id` INT UNSIGNED NOT NULL UNIQUE,
+                    `softwares_id` INT UNSIGNED NOT NULL DEFAULT 0 UNIQUE,
                     `vendor_name` VARCHAR(255),
                     `product_name` VARCHAR(255),
                     PRIMARY KEY (`id`)

@@ -5,6 +5,29 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.7] - 2026-09-13
+
+### Fixed
+
+- **Suite-wide key convention: every `*_id` foreign key column is now
+  `INT UNSIGNED NOT NULL DEFAULT 0`**, matching GLPI core's own convention.
+  Audit result (requested by the suite orchestrator on the user's behalf):
+  all 7 `glpi_plugin_nvd_*` tables' `id` and `*_id` columns were **already
+  `INT UNSIGNED`** since 1.0.0 - nvd was never affected by the "primary or
+  foreign key columns are using signed integers" warning GLPI 11's
+  `migration:unsigned_keys` command checks for. The only gap was a missing
+  `DEFAULT 0` on 5 `*_id` columns (`vulnerability_descriptions.vuln_id`,
+  `vulnerability_configurations.vuln_id`,
+  `vulnerable_software_versions.{vuln_id,softwareversions_id}`,
+  `vulnerable_system_versions.vuln_id`,
+  `cpe_software_associations.softwares_id`) - cosmetic in practice (every
+  insert already supplies these explicitly) but now added for consistency.
+  No negative sentinel values were found in any key column.
+- New `pluginNvdApplyKeyColumnDefaults()`, called on every install (fresh or
+  `--force`), applies the `DEFAULT 0` to an already-existing pre-2.4.7
+  install's tables via an idempotent `ALTER TABLE ... MODIFY` - no manual
+  migration step needed.
+
 ## [2.4.6] - 2026-09-13
 
 ### Fixed
@@ -356,6 +379,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.4.7]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.6]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.5]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.4]: https://github.com/teguh-umar/glpi-nvd-plugin

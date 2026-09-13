@@ -5,6 +5,22 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.6] - 2026-09-13
+
+### Fixed
+
+- Suite-wide UI rule (no colored pill/badge count next to a heading/tab
+  label - low contrast, flagged by the user on another plugin): the
+  Software/OS Vulnerabilities sub-tab labels now show a plain
+  `Label (N)` count instead of a `badge bg-primary` pill.
+- Severity badges in the vulnerability table (`CRITICAL`/`HIGH`/`MEDIUM`/
+  `LOW`/`NONE`) now set an explicit text colour per background instead of
+  relying on the bare `bg-*` class - in particular `bg-yellow` (MEDIUM) now
+  pairs with `text-dark` rather than an unspecified/white text colour that
+  made it hard to read (same bug class SAC found and fixed in their
+  v1.1.5: a badge with no explicit text colour silently inherits the wrong
+  one).
+
 ## [2.4.5] - 2026-09-13
 
 ### Added
@@ -340,6 +356,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.4.6]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.5]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.4]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.3]: https://github.com/teguh-umar/glpi-nvd-plugin

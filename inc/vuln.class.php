@@ -997,10 +997,16 @@ CSS;
                     . ' data-score="' . htmlescape($score_num) . '"'
                     . ' data-cve="' . htmlescape($row['cve_id']) . '"'
                     . ' data-search="' . htmlescape($search_blob) . '">';
+            // Explicit text colour per background - a bare bg-* class doesn't
+            // guarantee readable contrast (bg-yellow in particular needs dark
+            // text, not white; see hub §4 badge-contrast gotcha from SAC v1.1.5).
             $badge_class = [
-                'CRITICAL' => 'bg-red', 'HIGH' => 'bg-orange', 'MEDIUM' => 'bg-yellow',
-                'LOW' => 'bg-green', 'NONE' => 'bg-secondary',
-            ][$severity] ?? 'bg-secondary';
+                'CRITICAL' => 'bg-red text-white',
+                'HIGH'     => 'bg-orange text-white',
+                'MEDIUM'   => 'bg-yellow text-dark',
+                'LOW'      => 'bg-green text-white',
+                'NONE'     => 'bg-secondary text-white',
+            ][$severity] ?? 'bg-secondary text-white';
 
             $severity_cell = $interactive
                 ? '<span class="badge ' . $badge_class . '">' . htmlescape($severity) . '</span>'
@@ -1036,9 +1042,11 @@ CSS;
         $out  = '<nav>';
         $out .= '<div class="nav nav-tabs" id="nav-tab" role="tablist">';
         $out .= '<button class="nav-link active" id="nav-software_vuln-tab" data-bs-toggle="tab" data-bs-target="#nav-software_vuln" type="button" role="tab" aria-controls="nav-software_vuln" aria-selected="true">';
-        $out .= __s('Software Vulnerabilities') . ' <span class="badge bg-primary text-white ms-2">' . (int)$NsoftwareVulns . '</span></button>';
+        // Plain text count, not a badge/pill - suite-wide UI rule (hub §4):
+        // no colored count indicators next to headings/tab labels.
+        $out .= __s('Software Vulnerabilities') . ' (' . (int)$NsoftwareVulns . ')</button>';
         $out .= '<button class="nav-link" id="nav-system_vuln-tab" data-bs-toggle="tab" data-bs-target="#nav-system_vuln" type="button" role="tab" aria-controls="nav-system_vuln" aria-selected="false">';
-        $out .= __s('OS Vulnerabilities') . ' <span class="badge bg-primary text-white ms-2">' . (int)$NsystemVulns . '</span></button>';
+        $out .= __s('OS Vulnerabilities') . ' (' . (int)$NsystemVulns . ')</button>';
         $out .= '</div>';
         $out .= '</nav>';
         $out .= '<div class="tab-content" id="nav-tabContent">';

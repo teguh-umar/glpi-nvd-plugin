@@ -405,10 +405,12 @@ class PluginNvdUpdatevuln extends CommonGLPI {
         global $DB;
 
         // Soft-deleted (trashed) assets are not live inventory any more, even
-        // though their glpi_items_softwareversions rows are kept until purge.
-        $deletedIDs = [
-            'Computer' => PluginNvdDatabaseutils::getDeletedItemIDs('Computer'),
-            'Phone'    => PluginNvdDatabaseutils::getDeletedItemIDs('Phone'),
+        // though their glpi_items_softwareversions rows are kept until purge;
+        // an admin-configured asset-states scope (NVD Plugin config tab)
+        // excludes further assets whose current state isn't in scope.
+        $outOfScopeIDs = [
+            'Computer' => PluginNvdDatabaseutils::getOutOfScopeItemIDs('Computer'),
+            'Phone'    => PluginNvdDatabaseutils::getOutOfScopeItemIDs('Phone'),
         ];
 
         /***********************************************************************************************
@@ -425,7 +427,7 @@ class PluginNvdUpdatevuln extends CommonGLPI {
 
         foreach ($res as $row) {
 
-            if (in_array($row['items_id'], $deletedIDs[$row['itemtype']] ?? [], true)) { continue; }
+            if (in_array($row['items_id'], $outOfScopeIDs[$row['itemtype']] ?? [], true)) { continue; }
 
             $installed[$row['softwareversions_id']] = true;
         }
@@ -454,10 +456,11 @@ class PluginNvdUpdatevuln extends CommonGLPI {
         global $DB;
 
         // Soft-deleted (trashed) assets are not live inventory any more, even
-        // though their glpi_items_operatingsystems rows are kept until purge.
-        $deletedIDs = [
-            'Computer' => PluginNvdDatabaseutils::getDeletedItemIDs('Computer'),
-            'Phone'    => PluginNvdDatabaseutils::getDeletedItemIDs('Phone'),
+        // though their glpi_items_operatingsystems rows are kept until purge;
+        // an admin-configured asset-states scope excludes further assets.
+        $outOfScopeIDs = [
+            'Computer' => PluginNvdDatabaseutils::getOutOfScopeItemIDs('Computer'),
+            'Phone'    => PluginNvdDatabaseutils::getOutOfScopeItemIDs('Phone'),
         ];
 
         /***********************************************************************************************
@@ -475,7 +478,7 @@ class PluginNvdUpdatevuln extends CommonGLPI {
 
         foreach ($res as $id => $row) {
 
-            if (in_array($row['items_id'], $deletedIDs[$row['itemtype']] ?? [], true)) { continue; }
+            if (in_array($row['items_id'], $outOfScopeIDs[$row['itemtype']] ?? [], true)) { continue; }
 
             [$name, $version, $kernel, $kernelVersion, $servicePack] = PluginNvdDatabaseutils::requestOSdata($row);
 

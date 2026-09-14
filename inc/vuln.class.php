@@ -10,15 +10,54 @@ class PluginNvdVuln extends CommonDBTM {
      * @return boolean
      */
     static function canView(): bool {
-        
-        return Config::canView();
+
+        if (Config::canView()) { return true; }
+
+        // Configurable on the NVD Plugin config tab: 'asset_read' opens the
+        // Vulnerabilities tab to anyone who can already view the underlying
+        // Computer/Phone/Software (the CPE Association and config tabs stay
+        // Config::canView()-only regardless of this setting).
+        if (PluginNvdDatabaseutils::getVulnTabVisibility() === 'asset_read') {
+            return Session::haveRight('computer', READ)
+                || Session::haveRight('phone', READ)
+                || Session::haveRight('software', READ);
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether the given item should be excluded from vulnerability tracking:
+     * soft-deleted (trashed), or - when an admin-configured asset-states
+     * scope is set on the NVD Plugin config tab - not currently in one of
+     * those states.
+     *
+     * @since 2.5.0
+     *
+     * @param CommonGLPI $item
+     *
+     * @return bool
+     */
+    private static function isOutOfScope(CommonGLPI $item) {
+
+        if (method_exists($item, 'isDeleted') && $item->isDeleted()) {
+            return true;
+        }
+
+        $scoped_states = PluginNvdDatabaseutils::getScopedStateIDs();
+
+        if (!empty($scoped_states) && isset($item->fields['states_id'])) {
+            return !in_array((int) $item->fields['states_id'], $scoped_states, true);
+        }
+
+        return false;
     }
 
     /**
      * Get tab name for displayed item
      *
      * @since 1.0.0
-     * 
+     *
      * @param CommonGLPI $item
      * @param int        $withtemplate
      *
@@ -26,9 +65,9 @@ class PluginNvdVuln extends CommonDBTM {
      */
     function getTabNameForItem(CommonGLPI $item, $withtemplate=0) {
 
-        // A trashed asset is no longer live inventory - don't show a
+        // A trashed or out-of-scope asset isn't live inventory - don't show a
         // (potentially stale, soon-to-be-pruned) vulnerability count for it.
-        if (method_exists($item, 'isDeleted') && $item->isDeleted()) {
+        if (self::isOutOfScope($item)) {
             return self::createTabEntry(__('Vulnerabilities'), 0);
         }
 
@@ -224,12 +263,13 @@ class PluginNvdVuln extends CommonDBTM {
      */
     static function displayTabContentForItem(CommonGLPI $item, $tabnum=1, $withtemplate=0) {
 
-        // A trashed asset is no longer live inventory - vulnerability tracking
-        // is suspended until it is restored (or the stale rows are purged).
-        if (method_exists($item, 'isDeleted') && $item->isDeleted()) {
-            echo '<div class="alert alert-secondary m-2">'
-               . __s('This item is in the trash. Vulnerability tracking is suspended until it is restored.')
-               . '</div>';
+        // A trashed or out-of-scope asset isn't live inventory - vulnerability
+        // tracking is suspended for it.
+        if (self::isOutOfScope($item)) {
+            $message = (method_exists($item, 'isDeleted') && $item->isDeleted())
+                ? __s('This item is in the trash. Vulnerability tracking is suspended until it is restored.')
+                : __s('This item\'s current state is outside the asset states configured for vulnerability tracking (NVD Plugin config tab).');
+            echo '<div class="alert alert-secondary m-2">' . $message . '</div>';
             return true;
         }
 
@@ -636,7 +676,10 @@ CSS;
             }
 
             // Request device names from corresponding tables - excluding
-            // soft-deleted (trashed) assets, which are no longer live inventory.
+            // soft-deleted (trashed) assets and, when an admin-configured
+            // asset-states scope is set, assets whose state isn't in it.
+            $scoped_states = PluginNvdDatabaseutils::getScopedStateIDs();
+
             foreach ($instance_IDs as $item_type => $IDs) {
 
                 $table = 'glpi_' . $item_type . 's';
@@ -645,13 +688,17 @@ CSS;
                 if ($DB->fieldExists($table, 'is_deleted')) {
                     $condition['is_deleted'] = 0;
                 }
+                if (!empty($scoped_states) && $DB->fieldExists($table, 'states_id')) {
+                    $condition['states_id'] = $scoped_states;
+                }
 
                 /***********************************************************************************************
-                 * Request name of each still-live device associated with a vulnerability
+                 * Request name of each still-live, in-scope device associated
+                 * with a vulnerability
                  *
                  *  SELECT id, name
                  *  FROM 'glpi_' . $item_type . 's'
-                 *  WHERE id IN $IDs AND is_deleted = 0
+                 *  WHERE id IN $IDs AND is_deleted = 0 [AND states_id IN (...)]
                  **********************************************************************************************/
                 $res_2 = $DB->request(['SELECT' => ['id', 'name'],
                                        'FROM' => $table,
@@ -714,6 +761,7 @@ CSS;
                                           'FROM' => 'glpi_items_operatingsystems']);
 
         $deviceConfigurations = [];
+        $scoped_states = PluginNvdDatabaseutils::getScopedStateIDs();
 
         foreach ($res as $id => $row) {
 
@@ -747,11 +795,14 @@ CSS;
             if ($DB->fieldExists($table, 'is_deleted')) {
                 $condition['is_deleted'] = 0;
             }
+            if (!empty($scoped_states) && $DB->fieldExists($table, 'states_id')) {
+                $condition['states_id'] = $scoped_states;
+            }
 
             /***********************************************************************************************
-             * Request the device's name, if it is still a live (non-deleted) asset
+             * Request the device's name, if it is still a live, in-scope asset
              *
-             *  SELECT name FROM <item table> WHERE id = $ID AND is_deleted = 0
+             *  SELECT name FROM <item table> WHERE id = $ID AND is_deleted = 0 [AND states_id IN (...)]
              **********************************************************************************************/
             $res_2 = $DB->request(['SELECT' => 'name',
                                 'FROM' => $table,

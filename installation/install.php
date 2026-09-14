@@ -20,6 +20,10 @@ function pluginNvdInstall(){
     // separate upgrade script. Safe to run on every install()/--force call.
     pluginNvdApplyKeyColumnDefaults();
 
+    // Idempotent - adds the 2.5.0 config columns (scoped_states,
+    // vuln_tab_visibility) to an existing glpi_plugin_nvd_config table.
+    pluginNvdApplyConfigSchemaUpdates();
+
     pluginNvdRegisterTasks();
 }
 
@@ -228,15 +232,46 @@ function pluginNvdCreateTables(){
      * Stores:  Stores a sinle row containing config values used when requesting CVE records
      * Fields:
      *      -api_key = NVD API KEY for querying the database API
-     **********************************************************************************************/ 
+     *      -scoped_states = comma-separated glpi_states.id values an asset must have to be
+     *          included in CVE correlation; empty/NULL = no filter (every state in scope)
+     *      -vuln_tab_visibility = who can see the Vulnerabilities tab: 'config_only' (default,
+     *          same as the CPE/config tabs) or 'asset_read' (anyone with READ on the asset)
+     **********************************************************************************************/
     if(!$DB->tableExists('glpi_plugin_nvd_config')){
 
         $query = "CREATE TABLE `glpi_plugin_nvd_config` (
                     `api_key` VARCHAR(63) NOT NULL,
+                    `scoped_states` TEXT NULL DEFAULT NULL,
+                    `vuln_tab_visibility` VARCHAR(32) NOT NULL DEFAULT 'config_only',
                     PRIMARY KEY (`api_key`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 
         $DB->doQuery($query);
+    }
+}
+
+/**
+ * Adds the scoped_states / vuln_tab_visibility columns to an existing
+ * (pre-2.5.0) glpi_plugin_nvd_config table. Idempotent - safe to run on
+ * every install()/--force call, matches the pluginNvdApplyKeyColumnDefaults()
+ * pattern from 2.4.7.
+ *
+ * @since 2.5.0
+ *
+ * @return void
+ */
+function pluginNvdApplyConfigSchemaUpdates() {
+
+    global $DB;
+
+    if (!$DB->tableExists('glpi_plugin_nvd_config')) { return; }
+
+    if (!$DB->fieldExists('glpi_plugin_nvd_config', 'scoped_states')) {
+        $DB->doQuery("ALTER TABLE `glpi_plugin_nvd_config` ADD COLUMN `scoped_states` TEXT NULL DEFAULT NULL");
+    }
+
+    if (!$DB->fieldExists('glpi_plugin_nvd_config', 'vuln_tab_visibility')) {
+        $DB->doQuery("ALTER TABLE `glpi_plugin_nvd_config` ADD COLUMN `vuln_tab_visibility` VARCHAR(32) NOT NULL DEFAULT 'config_only'");
     }
 }
 

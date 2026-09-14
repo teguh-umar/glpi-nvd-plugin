@@ -35,6 +35,125 @@ class PluginNvdDatabaseutils {
     }
 
     /**
+     * Every glpi_states dropdown entry (Setup > Dropdowns > Status), as
+     * id => name. Used to populate the "Asset states in scope" multi-select
+     * on the NVD Plugin config tab.
+     *
+     * @since 2.5.0
+     *
+     * @return array<int,string>
+     */
+    public static function getAllStates() {
+
+        global $DB;
+
+        $res = $DB->request(['SELECT' => ['id', 'name'], 'FROM' => 'glpi_states', 'ORDER' => 'name']);
+
+        $states = [];
+        foreach ($res as $row) {
+            $states[(int) $row['id']] = $row['name'];
+        }
+
+        return $states;
+    }
+
+    /**
+     * The glpi_states IDs an asset must currently have to be included in CVE
+     * correlation, as configured on the NVD Plugin config tab. An empty
+     * array means "no filter" (every state in scope - the default, and the
+     * behaviour of every version before 2.5.0).
+     *
+     * @since 2.5.0
+     *
+     * @return int[]
+     */
+    public static function getScopedStateIDs() {
+
+        global $DB;
+
+        if (!$DB->fieldExists('glpi_plugin_nvd_config', 'scoped_states')) {
+            return [];
+        }
+
+        $res = $DB->request(['SELECT' => 'scoped_states', 'FROM' => 'glpi_plugin_nvd_config']);
+
+        if ($res->numrows() == 0) { return []; }
+
+        $raw = $res->current()['scoped_states'];
+
+        if (empty($raw)) { return []; }
+
+        return array_values(array_filter(array_map('intval', explode(',', $raw))));
+    }
+
+    /**
+     * Who can see the NVD Vulnerabilities tab: 'config_only' (default - same
+     * gate as the CPE Association and NVD Plugin config tabs, i.e. GLPI
+     * config/Setup right) or 'asset_read' (anyone with READ on Computer,
+     * Phone or Software can see it on items they can otherwise view).
+     * Configured on the NVD Plugin config tab.
+     *
+     * @since 2.5.0
+     *
+     * @return string
+     */
+    public static function getVulnTabVisibility() {
+
+        global $DB;
+
+        if (!$DB->fieldExists('glpi_plugin_nvd_config', 'vuln_tab_visibility')) {
+            return 'config_only';
+        }
+
+        $res = $DB->request(['SELECT' => 'vuln_tab_visibility', 'FROM' => 'glpi_plugin_nvd_config']);
+
+        if ($res->numrows() == 0) { return 'config_only'; }
+
+        $value = $res->current()['vuln_tab_visibility'];
+
+        return ($value === 'asset_read') ? 'asset_read' : 'config_only';
+    }
+
+    /**
+     * IDs of the given itemtype's items that should be excluded from CVE
+     * correlation: soft-deleted (is_deleted = 1), OR - when the admin has
+     * configured a states scope on the NVD Plugin config tab - not currently
+     * in one of those states. An empty scope means no state-based exclusion.
+     *
+     * @since 2.5.0
+     *
+     * @param string $itemtype
+     *
+     * @return int[]
+     */
+    public static function getOutOfScopeItemIDs($itemtype) {
+
+        global $DB;
+
+        $excluded = self::getDeletedItemIDs($itemtype);
+
+        $scoped_states = self::getScopedStateIDs();
+
+        if (empty($scoped_states)) {
+            return $excluded;
+        }
+
+        if (!is_string($itemtype) || !class_exists($itemtype) || !is_subclass_of($itemtype, CommonDBTM::class)) {
+            return $excluded;
+        }
+
+        $table = $itemtype::getTable();
+
+        if (!$DB->fieldExists($table, 'states_id')) {
+            return $excluded;
+        }
+
+        $res = $DB->request(['SELECT' => 'id', 'FROM' => $table, 'WHERE' => ['NOT' => ['states_id' => $scoped_states]]]);
+
+        return array_values(array_unique(array_merge($excluded, array_map('intval', self::pushResToArray($res, 'id')))));
+    }
+
+    /**
      * Every manufacturer name known to this GLPI instance (Setup > Dropdowns >
      * Manufacturers). Used as a local, always-available fallback source for the
      * CPE Association tab's vendor list when the external CIRCL directory

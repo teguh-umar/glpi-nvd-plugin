@@ -5,6 +5,34 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-09-14
+
+### Added
+
+- **Asset-states scope for CVE correlation.** The NVD Plugin config tab now
+  has a multi-select of every GLPI Status (Setup > Dropdowns > Status) an
+  asset must be in to be matched against CVEs and shown in vulnerability
+  lists - e.g. restrict to "Active" / "Good" / "Rented" and exclude assets
+  in states like "Old" or "Being repaired". Leaving nothing selected keeps
+  the previous behaviour (every state in scope). Applies to the cron
+  (`UpdateVulnTask` - out-of-scope installs are excluded and pruned like
+  soft-deleted ones already were) and to every display (Central tab, Tools
+  page, per-device tab).
+- **Configurable Vulnerabilities-tab visibility.** New config tab option:
+  "Only users with the GLPI configuration (Setup) right" (default, same as
+  before) or "Anyone who can already view the Computer, Phone or Software".
+  The CPE Association tab and the config tab itself are unaffected - they
+  always require the config/Setup right.
+- Opening the Vulnerabilities tab on an asset whose current state is out of
+  the configured scope now shows a "tracking suspended" notice (same
+  treatment as an already-deleted asset) instead of stale or misleading
+  data.
+- New `PluginNvdDatabaseutils::getAllStates()`, `getScopedStateIDs()`,
+  `getVulnTabVisibility()`, `getOutOfScopeItemIDs()`. New idempotent
+  `pluginNvdApplyConfigSchemaUpdates()` (runs on every install, adds the
+  `scoped_states` / `vuln_tab_visibility` columns to an existing
+  pre-2.5.0 `glpi_plugin_nvd_config` row - no separate migration step).
+
 ## [2.4.7] - 2026-09-13
 
 ### Fixed
@@ -379,6 +407,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.5.0]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.7]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.6]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.5]: https://github.com/teguh-umar/glpi-nvd-plugin

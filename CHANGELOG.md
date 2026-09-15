@@ -5,6 +5,58 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.1] - 2026-09-15
+
+Fixes from a documentation-driven code review (writing the user manual
+surfaced these; verified against source before fixing).
+
+### Fixed
+
+- **OS vulnerability cleanup never actually removed anything (present since
+  1.0.0).** `updateSystemVulnerabilities()` computed the stale-config list as
+  `array_diff(installed, stored)` - "installed but not yet tracked" (always
+  empty when checked against the removal target) - instead of
+  `array_diff(stored, installed)` - "tracked but no longer installed". The
+  software-version path already had the correct argument order; only the OS
+  path was swapped. Practical effect: an OS vulnerability record, once
+  created, was never pruned by the cron even after the affected asset was
+  patched, deleted, or moved out of the 2.5.0 asset-states scope - it only
+  ever disappeared from *display* (which independently re-checks live
+  devices), not from the database.
+- **CPE Association save required a different right than the tab itself.**
+  `PluginNvdSoftwarecpe::canView()` (the tab) requires `Config::canView()`,
+  but `front/softwarecpe.form.php` checked `Session::checkRight('software',
+  UPDATE)` on save - a user with Software UPDATE but no config right could
+  POST directly to the endpoint despite never seeing the tab; a user with
+  config right but no Software UPDATE saw the tab but got Access Denied on
+  save. Now both require `config` UPDATE, matching the tab.
+- **The 2.5.0 `asset_read` Vulnerabilities-tab visibility also opened
+  Central's organisation-wide aggregate list** (every vulnerability, every
+  device, with links) to anyone with READ on any Computer/Phone/Software -
+  not the intended "see vulnerabilities on an asset you can already view".
+  The Central tab now always requires `Config::canView()` regardless of the
+  `asset_read` setting; per-Computer/Phone/Software tabs are unaffected.
+
+### Known gap (not fixed here - needs a decision, see project notes)
+
+- **No entity filtering anywhere in the plugin.** Every vulnerability query
+  spans all GLPI entities regardless of the viewing user's entity
+  restrictions. This was low-impact while every nvd screen required the
+  config/Setup right (typically held by admins who see every entity
+  anyway); it's a real gap now that 2.5.0 lets `asset_read` users - who may
+  be entity-restricted - see per-device vulnerability tabs and (recovering
+  from the bug above) never Central. Needs a decision on scope before
+  implementing: should entity restriction also apply to config-right
+  viewers, or only to `asset_read` viewers?
+
+### Upgrade note
+
+Like 2.5.0, this requires `php bin/console glpi:plugin:install nvd --force`
+(or a fresh install) after replacing the files - the code fixes take effect
+immediately, but 2.5.0's `scoped_states` / `vuln_tab_visibility` config
+columns still need that command's migration step to exist at all if you
+haven't already run it once.
+
 ## [2.5.0] - 2026-09-14
 
 ### Added
@@ -407,6 +459,7 @@ GLPI 10 or earlier.
 Original release by Carlos Borau González. Targeted GLPI 10.0.6.
 See <https://github.com/Carlos-Borau/GLPI-NVD-PLUGIN>.
 
+[2.5.1]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.5.0]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.7]: https://github.com/teguh-umar/glpi-nvd-plugin
 [2.4.6]: https://github.com/teguh-umar/glpi-nvd-plugin

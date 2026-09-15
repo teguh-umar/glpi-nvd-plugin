@@ -88,9 +88,19 @@ class PluginNvdVuln extends CommonDBTM {
 
             default:
 
+                // Central's tab is the organisation-wide aggregate (every
+                // vulnerability, every device) - the configurable
+                // 'asset_read' Vulnerabilities-tab visibility only ever meant
+                // "on an asset the user can already view", not this. Always
+                // require the same Config::canView() the tab used before
+                // 2.5.0, regardless of that setting.
+                if (!Config::canView()) {
+                    return '';
+                }
+
                 [$totalVulnerabilities, $NsoftwareVulns, $NsystemVulns] = self::countForDashboard();
         }
-        
+
         return self::createTabEntry(__('Vulnerabilities'), $totalVulnerabilities);
     }
 
@@ -289,10 +299,15 @@ class PluginNvdVuln extends CommonDBTM {
 
             default:
 
+                // See the matching guard + comment in getTabNameForItem().
+                if (!Config::canView()) {
+                    return true;
+                }
+
                 [$totalVulnerabilities, $NsoftwareVulns, $NsystemVulns] = self::countForDashboard();
                 self::displayForDashboard($NsoftwareVulns, $NsystemVulns);
         }
-        
+
         return true;
     }
 

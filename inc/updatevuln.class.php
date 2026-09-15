@@ -158,8 +158,13 @@ class PluginNvdUpdatevuln extends CommonGLPI {
         // Request known vulnerable operating system versions 
         $vulnVersions = self::requestAllVulnerableVersions($vuln_versions_table, $vuln_version_column);
 
-        // Operating system versions to remove from vulnerable versions table
-        $versionsToRemove = array_diff(array_column($allVersions, 'configuration'), $vulnVersions);
+        // Operating system versions to remove from vulnerable versions table.
+        // (args were swapped pre-2.5.1: array_diff(installed, stored) computes
+        // newly-installed-but-not-yet-tracked configs, not stale ones - the
+        // DELETE in removeOldVulnerableVersions() then matched zero rows,
+        // every time, since new configs are by definition absent from the
+        // table. Stale OS vulnerabilities were never pruned.)
+        $versionsToRemove = array_diff($vulnVersions, array_column($allVersions, 'configuration'));
 
         // Remove vulnerable versions that are no longer installed on any device
         self::removeOldVulnerableVersions($versionsToRemove, $vuln_versions_table, $vuln_version_column);

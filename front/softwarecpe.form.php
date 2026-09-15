@@ -8,8 +8,11 @@ if (!$plugin->isInstalled('nvd') || !$plugin->isActivated('nvd')) {
    Html::displayNotFoundError();
 }
 
-// Managing CPE associations for a software requires the right to update software
-Session::checkRight('software', UPDATE);
+// The CPE Association tab itself is gated on Config::canView() (see
+// PluginNvdSoftwarecpe::canView()) - match that here so a user who can't see
+// the tab can't reach the same action by POSTing/GETing this endpoint
+// directly with a lesser "software" right they happen to hold.
+Session::checkRight('config', UPDATE);
 
 // Check if request is loocking for vendor products or wanting to set/update software vendor and product cpe names
 if (isset($_GET['vendor'])) {

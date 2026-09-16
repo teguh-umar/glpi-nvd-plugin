@@ -5,6 +5,80 @@ All notable changes to the NVD plugin for GLPI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-09-16
+
+Closes the "no entity filtering anywhere in the plugin" gap recorded under
+2.5.1. Decision (user): *sesuaikan dengan native GLPI* - match core's own
+entity restriction rather than invent a plugin-specific scheme, and apply it
+to every viewer, not just `asset_read` ones.
+
+### Added
+
+- **Native GLPI entity restriction on every vulnerability view.**
+  `PluginNvdDatabaseutils::getEntityRestrictCriteria()` wraps core's
+  `getEntitiesRestrictCriteria()` (`src/DbUtils.php`, verified against
+  `glpi-project/glpi` branch `11.0/bugfixes`), so the plugin honours exactly
+  what the rest of GLPI honours: the active entity / sub-entity selection,
+  `is_recursive` on the tables that carry it, and the "show all entities"
+  setting. Applied to:
+  - the per-Software Vulnerabilities tab (`glpi_softwareversions`),
+  - the per-Computer / per-Phone Vulnerabilities tab
+    (`glpi_items_softwareversions`, `glpi_items_operatingsystems`,
+    `glpi_softwares`),
+  - the Central aggregate tab and the standalone **Tools > NVD
+    Vulnerabilities** page, on both the installation rows and the asset
+    tables the device names are read from.
+
+  Tables with no `entities_id` column (global dropdowns such as
+  `glpi_manufacturers` and `glpi_operatingsystems`) are left unrestricted,
+  which is also what core does.
+
+### Changed
+
+- **The KPI tiles, the tab badge and the nav-tab counts are now derived from
+  the same entity-restricted pass that builds the tables**, so they can no
+  longer disagree with what is listed underneath them. Previously
+  `countForDashboard()` counted every stored CVE row directly, ignoring
+  deleted assets and the 2.5.0 asset-states scope as well as entities.
+  `gatherSoftwareVulnList()` / `gatherSystemVulnList()` were split into
+  `collectSoftwareVulnInstances()` / `collectSystemVulnInstances()` (data)
+  plus `buildVulnLists()` (data + HTML + counts in one pass); the standalone
+  page no longer walks the inventory twice.
+- **The "unresolved OS configuration" diagnostic row** (a CVE whose
+  `system_configuration` matches no current installation, shown with the raw
+  CPE string instead of device links) is now only rendered for sessions that
+  see every entity. With a restriction in force, "no device carries this
+  configuration" means only "none that *you* can see", so showing it to an
+  entity-scoped user would both mislead and hint at assets outside their
+  scope.
+
+- **The Central / standalone software query was rewritten from a comma join
+  to an explicit `INNER JOIN`.** `DBmysqlIterator` treats a top-level `FKEY`
+  as loose criteria, and when loose criteria and a `WHERE` key are both
+  present it emits only the loose ones (plus an `E_USER_WARNING`) - which
+  would have silently discarded the new entity restriction on exactly the
+  query that needed it most.
+
+### Not changed, deliberately
+
+- **CVE correlation (the `UpdateVulnTask` cron) stays entity-wide.** It runs
+  with no active entity, where core's `getEntitiesRestrictCriteria()` falls
+  back to the root entity - which would silently leave every sub-entity asset
+  uncorrelated. Entity scoping in this plugin is a display concern, never a
+  correlation one; `getEntityRestrictCriteria()` returns no criteria under
+  cron/CLI, and the two correlation queries carry a comment saying so.
+- **The "Asset states in scope" picker on the config tab is not
+  entity-restricted.** The NVD config is a single global row; restricting the
+  state list to the editing admin's active entity would hide already-selected
+  states from the multi-select and silently drop them on the next save.
+
+### Upgrade note
+
+Code-only - no schema change. Replace the files; running
+`php bin/console glpi:plugin:install nvd --force` is still recommended (and
+required if you are coming from before 2.5.0, whose config columns need the
+migration step).
+
 ## [2.5.1] - 2026-09-15
 
 Fixes from a documentation-driven code review (writing the user manual

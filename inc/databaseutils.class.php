@@ -3,6 +3,63 @@
 class PluginNvdDatabaseutils {
 
     /**
+     * Native GLPI entity restriction for a core table, ready to be merged into
+     * a $DB->request() 'WHERE'.
+     *
+     * Wraps core's getEntitiesRestrictCriteria() (src/DbUtils.php) rather than
+     * filtering by hand, so the plugin honours exactly what the rest of GLPI
+     * honours: the active entity / sub-entity selection, "show all entities",
+     * and is_recursive on tables that carry it.
+     *
+     * Two deliberate behaviours:
+     *  - Tables with no `entities_id` column (global dropdowns such as
+     *    glpi_manufacturers or glpi_operatingsystems) get no restriction.
+     *  - In a cron / CLI context there is no active entity, and core's fallback
+     *    is the root entity - which would silently hide every sub-entity asset
+     *    from CVE correlation. Vulnerability matching must cover the whole
+     *    instance, so no restriction is applied there either. Entity scoping is
+     *    a *display* concern in this plugin, never a correlation one.
+     *
+     * @since 2.6.0
+     *
+     * @param string $table  Core table name (e.g. 'glpi_computers')
+     *
+     * @return array  Criteria to array_merge() into a WHERE (empty = no restriction)
+     */
+    public static function getEntityRestrictCriteria($table) {
+
+        global $DB;
+
+        if (!is_string($table) || $table === '') { return []; }
+
+        if (!$DB->tableExists($table) || !$DB->fieldExists($table, 'entities_id')) { return []; }
+
+        if (isCommandLine() || Session::isCron()) { return []; }
+
+        // Same test core's maybeRecursive() makes, without needing the table to
+        // resolve back to an itemtype.
+        $is_recursive = $DB->fieldExists($table, 'is_recursive');
+
+        return getEntitiesRestrictCriteria($table, '', '', $is_recursive);
+    }
+
+    /**
+     * Whether the current session sees every entity ("show all entities" /
+     * root profile with recursive access). Used to decide whether an
+     * instance-wide diagnostic row may be shown.
+     *
+     * @since 2.6.0
+     *
+     * @return bool
+     */
+    public static function seesAllEntities() {
+
+        if (isCommandLine() || Session::isCron()) { return true; }
+
+        return !empty($_SESSION['glpishowallentities']);
+    }
+
+    /**
      * IDs of the given itemtype's items currently in the GLPI trash
      * (is_deleted = 1). Used to exclude soft-deleted assets from vulnerability
      * matching, counts and display - a deleted asset is not part of the live

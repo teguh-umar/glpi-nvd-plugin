@@ -421,6 +421,12 @@ class PluginNvdUpdatevuln extends CommonGLPI {
         /***********************************************************************************************
          * Request all software installations on the devices managed by GLPI
          *
+         * Deliberately NOT entity-restricted: this is the CVE correlation pass,
+         * it runs from cron with no active entity, and core's getEntitiesRestrictCriteria()
+         * would fall back to the root entity there - silently leaving every
+         * sub-entity asset uncorrelated. Entity scoping in this plugin is a
+         * display concern (see PluginNvdVuln), never a correlation one.
+         *
          *  SELECT DISTINCT softwareversions_id, itemtype, items_id
          *  FROM glpi_items_softwareversions
          **********************************************************************************************/
@@ -470,6 +476,8 @@ class PluginNvdUpdatevuln extends CommonGLPI {
 
         /***********************************************************************************************
          * Request all operating system installations on the devices managed by GLPI
+         *
+         * Entity-wide on purpose - same reasoning as the software pass above.
          *
          *  SELECT itemtype, items_id, operatingsystems_id, operatingsystemversions_id,
          *      operatingsystemkernelversions_id, operatingsystemservicepacks_id

@@ -1,6 +1,6 @@
 # NVD Plugin for GLPI
 
-- **Version:** 2.5.1
+- **Version:** 2.6.0
 - **Compatibility:** GLPI 11.0 (for GLPI 10, use the upstream 1.0.0 release)
 - **License:** GPL-3.0-or-later — see [LICENSE](LICENSE)
 - **Author:** Carlos Borau González; GLPI 11 port by PGN ICT
@@ -27,6 +27,11 @@ The NVD plugin for GLPI has been developed as an open source project with its ma
 1. In order to query the NVD database for vulnerabilities, the corresponding API KEY needs to be set by accesing the plugin configuration menu (*Configuration* -> *General* -> *NVD Plugin*).
 2. In order to correctcly compose the CPE names of the different programs to search for vulnerabilities they need to be manually associated with the corresponding *vendor* and *product* names for the CPE estandar. Thiscan be archieved with the interface provided on the *CPE Associations* tab located in a software's view.
 3. (Since 2.5.0) On the same config tab: restrict CVE correlation to specific **asset states** (e.g. only "Active"/"Rented" assets), and choose whether the **Vulnerabilities tab** requires the GLPI configuration right (default) or is open to anyone who can view the Computer/Phone/Software.
+4. (Since 2.6.0) Nothing to configure for **entities**: every vulnerability view - the
+   per-asset tabs, the Central tab and the *Tools -> NVD Vulnerabilities* page - is
+   restricted with GLPI's own entity rules, so a user sees vulnerabilities only for the
+   assets in their active entity / sub-entities. CVE correlation itself (the
+   `UpdateVulnTask` cron) stays instance-wide on purpose.
 
 ## Supported operating systems
 

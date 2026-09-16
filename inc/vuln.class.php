@@ -131,7 +131,10 @@ class PluginNvdVuln extends CommonDBTM {
                              'FROM' => 'glpi_plugin_nvd_vulnerable_software_versions',
                              'INNER JOIN' => ['glpi_softwareversions' => ['FKEY' => ['glpi_plugin_nvd_vulnerable_software_versions' => 'softwareversions_id',
                                                                                      'glpi_softwareversions' => 'id']]] ,
-                             'WHERE' => ['softwares_id' => $item->getID()],
+                             'WHERE' => array_merge(
+                                 ['softwares_id' => $item->getID()],
+                                 PluginNvdDatabaseutils::getEntityRestrictCriteria('glpi_softwareversions')
+                             ),
                              'GROUPBY' => 'vuln_id']);
 
         return $res->numrows();
@@ -165,7 +168,10 @@ class PluginNvdVuln extends CommonDBTM {
                                          'FROM' => 'glpi_plugin_nvd_vulnerable_software_versions',
                                          'INNER JOIN' => ['glpi_items_softwareversions' => ['FKEY' => ['glpi_plugin_nvd_vulnerable_software_versions' => 'softwareversions_id',
                                                                                                      'glpi_items_softwareversions' => 'softwareversions_id']]],
-                                         'WHERE' => ['items_id' => $item->getID(), 'itemtype' => $item->getType()],
+                                         'WHERE' => array_merge(
+                                             ['items_id' => $item->getID(), 'itemtype' => $item->getType()],
+                                             PluginNvdDatabaseutils::getEntityRestrictCriteria('glpi_items_softwareversions')
+                                         ),
                                          'GROUPBY' => 'vuln_id']);
 
         $NsoftwareVulns = $res->numrows();
@@ -182,7 +188,10 @@ class PluginNvdVuln extends CommonDBTM {
          **********************************************************************************************/
         $res = $DB->request(['SELECT' => ['operatingsystems_id', 'operatingsystemversions_id', 'operatingsystemkernelversions_id', 'operatingsystemservicepacks_id'],
                              'FROM' => 'glpi_items_operatingsystems',
-                             'WHERE' => ['items_id' => $item->getID(), 'itemtype' => $item->getType()]]);
+                             'WHERE' => array_merge(
+                                 ['items_id' => $item->getID(), 'itemtype' => $item->getType()],
+                                 PluginNvdDatabaseutils::getEntityRestrictCriteria('glpi_items_operatingsystems')
+                             )]);
 
         if ($res->numrows() == 0) { return [$NsoftwareVulns, $NsoftwareVulns, 0]; }
 
@@ -215,7 +224,11 @@ class PluginNvdVuln extends CommonDBTM {
     }
 
     /**
-     * Count total number of vulnerabilities
+     * Count the vulnerabilities visible to the current session.
+     *
+     * Derived from the same entity-restricted collectors the dashboard and the
+     * Tools > NVD Vulnerabilities page render, so the KPI tiles / tab badge can
+     * never disagree with the tables underneath them.
      *
      * @since 1.0.0
      *
@@ -223,41 +236,12 @@ class PluginNvdVuln extends CommonDBTM {
      */
     private static function countForDashboard() {
 
-        global $DB;
-
-        /***********************************************************************************************
-         * Request every software vulnerability registered
-         * 
-         *  SELECT vuln_id 
-         *  FROM glpi_plugin_nvd_vulnerable_software_versions
-         *  GROUP BY vuln_id
-         **********************************************************************************************/
-        $res = $DB->request(['SELECT' => 'vuln_id',
-                                         'FROM' => 'glpi_plugin_nvd_vulnerable_software_versions',
-                                         'GROUPBY' => 'vuln_id']);
-
-        $NsoftwareVulns = $res->numrows();
-        
-        $softwareVulns = PluginNvdDatabaseutils::pushResToArray($res, 'vuln_id');
-
-        /***********************************************************************************************
-         * Request every operating system vulnerability registered
-         * 
-         *  SELECT vuln_id 
-         *  FROM glpi_plugin_nvd_vulnerable_system_versions
-         *  GROUP BY vuln_id
-         **********************************************************************************************/
-        $res = $DB->request(['SELECT' => 'vuln_id',
-                                         'FROM' => 'glpi_plugin_nvd_vulnerable_system_versions',
-                                         'GROUPBY' => 'vuln_id']);
-
-        $NsystemVulns = $res->numrows();
-
-        $systemVulns = PluginNvdDatabaseutils::pushResToArray($res, 'vuln_id');
+        $softwareVulns = array_keys(self::collectSoftwareVulnInstances());
+        $systemVulns   = array_keys(self::collectSystemVulnInstances());
 
         $totalVulns = count(array_unique(array_merge($softwareVulns, $systemVulns)));
 
-        return [$totalVulns, $NsoftwareVulns, $NsystemVulns];
+        return [$totalVulns, count($softwareVulns), count($systemVulns)];
     }
 
     /**
@@ -304,8 +288,7 @@ class PluginNvdVuln extends CommonDBTM {
                     return true;
                 }
 
-                [$totalVulnerabilities, $NsoftwareVulns, $NsystemVulns] = self::countForDashboard();
-                self::displayForDashboard($NsoftwareVulns, $NsystemVulns);
+                self::displayForDashboard();
         }
 
         return true;
@@ -342,7 +325,10 @@ class PluginNvdVuln extends CommonDBTM {
                              'FROM' => 'glpi_plugin_nvd_vulnerable_software_versions',
                              'INNER JOIN' => ['glpi_softwareversions' => ['FKEY' => ['glpi_plugin_nvd_vulnerable_software_versions' => 'softwareversions_id',
                                                                                      'glpi_softwareversions' => 'id']]] ,
-                             'WHERE' => ['softwares_id' => $item->getID()],
+                             'WHERE' => array_merge(
+                                 ['softwares_id' => $item->getID()],
+                                 PluginNvdDatabaseutils::getEntityRestrictCriteria('glpi_softwareversions')
+                             ),
                              'GROUPBY' => 'vuln_id']);
         
         $vulnerabilities = [];
@@ -427,7 +413,10 @@ class PluginNvdVuln extends CommonDBTM {
                 'FROM' => 'glpi_plugin_nvd_vulnerable_software_versions',
                 'INNER JOIN' => ['glpi_items_softwareversions' => ['FKEY' => ['glpi_plugin_nvd_vulnerable_software_versions' => 'softwareversions_id',
                                                                               'glpi_items_softwareversions' => 'softwareversions_id']]],
-                'WHERE' => ['items_id' => $item->getID(), 'itemtype' => $item->getType()],
+                'WHERE' => array_merge(
+                    ['items_id' => $item->getID(), 'itemtype' => $item->getType()],
+                    PluginNvdDatabaseutils::getEntityRestrictCriteria('glpi_items_softwareversions')
+                ),
                 'GROUPBY' => 'vuln_id']);
 
         $vulnerabilities = [];
@@ -448,7 +437,10 @@ class PluginNvdVuln extends CommonDBTM {
                                  'FROM' => 'glpi_softwares',
                                  'INNER JOIN' => ['glpi_softwareversions' => ['FKEY' => ['glpi_softwares' => 'id',
                                                                                          'glpi_softwareversions' => 'softwares_id']]],
-                                 'WHERE' => ['glpi_softwareversions.id' => explode(',', $row['version'])]]);
+                                 'WHERE' => array_merge(
+                                     ['glpi_softwareversions.id' => explode(',', $row['version'])],
+                                     PluginNvdDatabaseutils::getEntityRestrictCriteria('glpi_softwares')
+                                 )]);
 
             $programs = [];
 
@@ -483,7 +475,10 @@ class PluginNvdVuln extends CommonDBTM {
          **********************************************************************************************/
         $res = $DB->request(['SELECT' => ['operatingsystems_id', 'operatingsystemversions_id', 'operatingsystemkernelversions_id', 'operatingsystemservicepacks_id'],
                                           'FROM' => 'glpi_items_operatingsystems',
-                                          'WHERE' => ['items_id' => $item->getID(), 'itemtype' => $item->getType()]]);
+                                          'WHERE' => array_merge(
+                                              ['items_id' => $item->getID(), 'itemtype' => $item->getType()],
+                                              PluginNvdDatabaseutils::getEntityRestrictCriteria('glpi_items_operatingsystems')
+                                          )]);
 
         if ($res->numrows() == 1) { 
 
@@ -530,17 +525,13 @@ class PluginNvdVuln extends CommonDBTM {
      *
      * @since 1.0.0
      * 
-     * @param int $NsoftwareVulns   Number of software vulnerabilities
-     * @param int $NsystemVulns     Number of operating system vulnerabilities
-     *
      * @return void
      */
-    private static function displayForDashboard($NsoftwareVulns, $NsystemVulns){
+    private static function displayForDashboard(){
 
         $tally = [];
 
-        $softwareList = self::gatherSoftwareVulnList($tally);
-        $systemList   = self::gatherSystemVulnList($tally);
+        [$softwareList, $systemList, , $NsoftwareVulns, $NsystemVulns] = self::buildVulnLists($tally);
 
         // Display both software and system vulnerabilities organized with nav tabs
         self::displayNavTabs($softwareList, $NsoftwareVulns, $systemList, $NsystemVulns);
@@ -559,10 +550,8 @@ class PluginNvdVuln extends CommonDBTM {
 
         $tally = ['CRITICAL' => 0, 'HIGH' => 0, 'MEDIUM' => 0, 'LOW' => 0, 'NONE' => 0];
 
-        $softwareList = self::gatherSoftwareVulnList($tally, true);
-        $systemList   = self::gatherSystemVulnList($tally, true);
-
-        [$totalVulns, $NsoftwareVulns, $NsystemVulns] = self::countForDashboard();
+        [$softwareList, $systemList, $totalVulns, $NsoftwareVulns, $NsystemVulns]
+            = self::buildVulnLists($tally, true);
 
         echo '<div class="nvd-vuln-page container-fluid mt-2">';
 
@@ -643,17 +632,21 @@ CSS;
     }
 
     /**
-     * Build the "software vulnerabilities" table (every CVE affecting an
-     * installed software version, and the assets running it).
+     * Every CVE affecting an installed software version, mapped to the assets
+     * running it, restricted to what the current session may see.
      *
-     * @since 2.1.0
+     * Three filters apply:
+     *  - the native GLPI entity restriction, on the installation rows and on
+     *    the asset tables themselves (active entity / sub-entities /
+     *    is_recursive / "show all entities"),
+     *  - soft-deleted (trashed) assets,
+     *  - the admin-configured asset-states scope, when set.
      *
-     * @param array $severityTally  Filled in place with severity label => count
-     * @param bool  $interactive    Emit the search / filter toolbar + sortable headers
+     * @since 2.6.0
      *
-     * @return string  HTML, or '' when there are no software vulnerabilities
+     * @return array  vuln_id => HTML list of links to the affected assets
      */
-    private static function gatherSoftwareVulnList(&$severityTally, $interactive=FALSE) {
+    private static function collectSoftwareVulnInstances() {
 
         global $DB, $CFG_GLPI;
 
@@ -662,21 +655,33 @@ CSS;
          *
          *  SELECT vuln_id AS VULN_ID,
          *       GROUP_CONCAT(DISTINCT itemtype, ':', items_id ORDER BY itemtype, items_id) AS instances
-         *  FROM glpi_plugin_nvd_vulnerable_software_versions, glpi_items_softwareversions
-         *  WHERE glpi_plugin_nvd_vulnerable_software_versions.softwareversions_id =
-         *        glpi_items_softwareversions.softwareversions_id
+         *  FROM glpi_plugin_nvd_vulnerable_software_versions
+         *  INNER JOIN glpi_items_softwareversions
+         *  ON glpi_plugin_nvd_vulnerable_software_versions.softwareversions_id =
+         *     glpi_items_softwareversions.softwareversions_id
+         *  WHERE <entity restriction on glpi_items_softwareversions>
          *  GROUP BY vuln_id
          **********************************************************************************************/
         $res = $DB->request(['SELECT' => [
                     'vuln_id AS VULN_ID',
                     new QueryExpression("GROUP_CONCAT(DISTINCT `itemtype`, ':', `items_id` ORDER BY `itemtype`, `items_id`) AS instances")
                 ],
-                'FROM' => ['glpi_plugin_nvd_vulnerable_software_versions', 'glpi_items_softwareversions'],
-                'FKEY' => ['glpi_plugin_nvd_vulnerable_software_versions' => 'softwareversions_id',
-                           'glpi_items_softwareversions' => 'softwareversions_id'],
+                // Comma-join + top-level FKEY (the shape this query had before
+                // 2.6.0) cannot carry a 'WHERE': DBmysqlIterator treats that
+                // FKEY as loose criteria and, when both loose criteria and a
+                // 'WHERE' key are present, emits only the loose ones plus an
+                // E_USER_WARNING - silently dropping the entity restriction.
+                // Rewritten as an explicit INNER JOIN, like the plugin's other
+                // queries. See src/DBmysqlIterator.php.
+                'FROM' => 'glpi_plugin_nvd_vulnerable_software_versions',
+                'INNER JOIN' => ['glpi_items_softwareversions' => ['FKEY' => ['glpi_plugin_nvd_vulnerable_software_versions' => 'softwareversions_id',
+                                                                             'glpi_items_softwareversions' => 'softwareversions_id']]],
+                'WHERE' => PluginNvdDatabaseutils::getEntityRestrictCriteria('glpi_items_softwareversions'),
                 'GROUPBY' => 'vuln_id']);
 
         $vulnerabilities = [];
+
+        $scoped_states = PluginNvdDatabaseutils::getScopedStateIDs();
 
         foreach ($res as $id => $row) {
 
@@ -690,11 +695,10 @@ CSS;
                 $instance_IDs[strtolower($item_type)][] = $item_id;
             }
 
-            // Request device names from corresponding tables - excluding
-            // soft-deleted (trashed) assets and, when an admin-configured
-            // asset-states scope is set, assets whose state isn't in it.
-            $scoped_states = PluginNvdDatabaseutils::getScopedStateIDs();
-
+            // Request device names from corresponding tables - excluding assets
+            // outside the session's entities, soft-deleted (trashed) assets
+            // and, when an admin-configured asset-states scope is set, assets
+            // whose state isn't in it.
             foreach ($instance_IDs as $item_type => $IDs) {
 
                 $table = 'glpi_' . $item_type . 's';
@@ -707,20 +711,26 @@ CSS;
                     $condition['states_id'] = $scoped_states;
                 }
 
+                $condition = array_merge(
+                    $condition,
+                    PluginNvdDatabaseutils::getEntityRestrictCriteria($table)
+                );
+
                 /***********************************************************************************************
-                 * Request name of each still-live, in-scope device associated
-                 * with a vulnerability
+                 * Request name of each visible, still-live, in-scope device
+                 * associated with a vulnerability
                  *
                  *  SELECT id, name
                  *  FROM 'glpi_' . $item_type . 's'
                  *  WHERE id IN $IDs AND is_deleted = 0 [AND states_id IN (...)]
+                 *    AND <entity restriction>
                  **********************************************************************************************/
                 $res_2 = $DB->request(['SELECT' => ['id', 'name'],
                                        'FROM' => $table,
                                        'WHERE' => $condition]);
 
-                // Only the still-live devices survive here - a deleted asset's
-                // id simply won't appear in $names.
+                // Only the visible, still-live devices survive here - an
+                // out-of-entity or deleted asset's id simply won't appear.
                 $names = [];
                 foreach ($res_2 as $device_row) {
                     $names[$device_row['id']] = $device_row['name'];
@@ -737,32 +747,28 @@ CSS;
                 }
             }
 
-            // Skip vulnerabilities whose every installation is on a deleted asset.
+            // Skip vulnerabilities with no visible, live installation left.
             if ($instances) {
                 $vulnerabilities[$row['VULN_ID']] = implode(', ', $instances);
             }
         }
 
-        //Request information on the obtained CVE records
-        $res = self::requestVulnerabilities(array_keys($vulnerabilities));
-
-        return self::displayVulnerabilityList($res, $vulnerabilities, __('Devices'), NULL, $severityTally, $interactive);
+        return $vulnerabilities;
     }
 
     /**
-     * Build the "operating system vulnerabilities" table (every CVE affecting an
-     * installed OS version, and the assets running it).
+     * Every CVE affecting an installed operating system version, mapped to the
+     * assets running it, restricted to what the current session may see.
      *
-     * @since 2.1.0
+     * Same three filters as collectSoftwareVulnInstances().
      *
-     * @param array $severityTally  Filled in place with severity label => count
-     * @param bool  $interactive    Emit the search / filter toolbar + sortable headers
+     * @since 2.6.0
      *
-     * @return string  HTML, or '' when there are no OS vulnerabilities
+     * @return array  vuln_id => HTML list of links to the affected assets
      */
-    private static function gatherSystemVulnList(&$severityTally, $interactive=FALSE) {
+    private static function collectSystemVulnInstances() {
 
-        global $DB, $CFG_GLPI;
+        global $DB;
 
         /***********************************************************************************************
          * Request every operating system version and the devices associated with it
@@ -770,10 +776,12 @@ CSS;
          *  SELECT items_id, itemtype, operatingsystems_id, operatingsystemversions_id,
          *      operatingsystemkernelversions_id, operatingsystemservicepacks_id
          *  FROM glpi_items_operatingsystems
+         *  WHERE <entity restriction on glpi_items_operatingsystems>
          **********************************************************************************************/
         $res = $DB->request(['SELECT' => ['items_id', 'itemtype', 'operatingsystems_id', 'operatingsystemversions_id',
                                           'operatingsystemkernelversions_id', 'operatingsystemservicepacks_id'],
-                                          'FROM' => 'glpi_items_operatingsystems']);
+                                          'FROM' => 'glpi_items_operatingsystems',
+                                          'WHERE' => PluginNvdDatabaseutils::getEntityRestrictCriteria('glpi_items_operatingsystems')]);
 
         $deviceConfigurations = [];
         $scoped_states = PluginNvdDatabaseutils::getScopedStateIDs();
@@ -814,16 +822,22 @@ CSS;
                 $condition['states_id'] = $scoped_states;
             }
 
+            $condition = array_merge(
+                $condition,
+                PluginNvdDatabaseutils::getEntityRestrictCriteria($table)
+            );
+
             /***********************************************************************************************
-             * Request the device's name, if it is still a live, in-scope asset
+             * Request the device's name, if it is a visible, still-live, in-scope asset
              *
              *  SELECT name FROM <item table> WHERE id = $ID AND is_deleted = 0 [AND states_id IN (...)]
+             *    AND <entity restriction>
              **********************************************************************************************/
             $res_2 = $DB->request(['SELECT' => 'name',
                                 'FROM' => $table,
                                 'WHERE' => $condition]);
 
-            if ($res_2->numrows() != 1) { continue; } // deleted, or no longer exists
+            if ($res_2->numrows() != 1) { continue; } // out of entity, deleted, or no longer exists
 
             $deviceName = $res_2->current()['name'];
 
@@ -843,6 +857,13 @@ CSS;
 
         $vulnerabilities = [];
 
+        // The "never resolved at all" diagnostic row below is instance-wide by
+        // nature: once an entity restriction is in force, "no device carries
+        // this configuration" only means "none that *you* can see", so showing
+        // it to an entity-scoped session would both mislead and hint at assets
+        // outside their scope. Keep it only for sessions that see everything.
+        $show_unresolved = PluginNvdDatabaseutils::seesAllEntities();
+
         foreach ($res as $id => $row) {
 
             $configurations = explode(',', $row['configurations']);
@@ -859,23 +880,51 @@ CSS;
             }
 
             if ($devices) {
-                // At least one live (non-deleted) device carries this configuration.
+                // At least one visible, live device carries this configuration.
                 $vulnerabilities[$row['VULN_ID']] = implode(', ', array_unique($devices));
-            } elseif (!$anyConfigurationResolved) {
+            } elseif (!$anyConfigurationResolved && $show_unresolved) {
                 // The configuration string itself never matched any current
                 // installation (a resolution gap, not a deletion) - still show
                 // the row, labelled with the raw config, so it isn't silently lost.
                 $vulnerabilities[$row['VULN_ID']] = '<span class="text-muted">'
                     . htmlescape(implode(', ', array_unique($configurations))) . '</span>';
             }
-            // else: the configuration matched, but every device carrying it has
-            // been deleted - skip this vulnerability entirely.
+            // else: the configuration matched, but every device carrying it is
+            // deleted or outside this session's entities - skip it entirely.
         }
 
-        //Request information on the obtained CVE records
-        $res = self::requestVulnerabilities(array_keys($vulnerabilities));
+        return $vulnerabilities;
+    }
 
-        return self::displayVulnerabilityList($res, $vulnerabilities, __('Devices'), NULL, $severityTally, $interactive);
+    /**
+     * Build both vulnerability tables plus the counts that label them, from a
+     * single pass over the (entity-restricted) inventory.
+     *
+     * @since 2.6.0
+     *
+     * @param array $severityTally  Filled in place with severity label => count
+     * @param bool  $interactive    Emit the search / filter toolbar + sortable headers
+     *
+     * @return array [softwareList, systemList, totalVulns, NsoftwareVulns, NsystemVulns]
+     */
+    private static function buildVulnLists(&$severityTally, $interactive=FALSE) {
+
+        $softwareVulns = self::collectSoftwareVulnInstances();
+        $systemVulns   = self::collectSystemVulnInstances();
+
+        $softwareList = self::displayVulnerabilityList(
+            self::requestVulnerabilities(array_keys($softwareVulns)),
+            $softwareVulns, __('Devices'), NULL, $severityTally, $interactive
+        );
+
+        $systemList = self::displayVulnerabilityList(
+            self::requestVulnerabilities(array_keys($systemVulns)),
+            $systemVulns, __('Devices'), NULL, $severityTally, $interactive
+        );
+
+        $totalVulns = count(array_unique(array_merge(array_keys($softwareVulns), array_keys($systemVulns))));
+
+        return [$softwareList, $systemList, $totalVulns, count($softwareVulns), count($systemVulns)];
     }
 
     /**
